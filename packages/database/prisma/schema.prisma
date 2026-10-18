@@ -28,7 +28,11 @@ model User {
   id                    String             @id @default(uuid())
   email                 String             @unique
   fullName              String?
+  avatarUrl             String?
+  googleId              String?            @unique
+  githubId              String?            @unique
   encryptedGoogleToken  String?
+  encryptedGithubToken  String?
   googleHistoryId       String?
   googleWatchExpiry     DateTime?
   preferences           Json               @default("{}")
@@ -41,6 +45,8 @@ model User {
   pushSubscriptions     PushSubscription[]
 
   @@index([email])
+  @@index([googleId])
+  @@index([githubId])
   @@index([googleWatchExpiry])
 }
 
