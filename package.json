@@ -1,0 +1,16 @@
+{
+  "name": "applytrack-monorepo",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev --workspace=applytrack-server",
+    "dev:client": "npm run dev --workspace=applytrack-client",
+    "db:generate": "npm run generate --workspace=@applytrack/database",
+    "db:migrate": "npm run migrate --workspace=@applytrack/database",
+    "lint": "oxlint"
+  }
+}
