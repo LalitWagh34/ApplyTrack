@@ -1,0 +1,6 @@
+# Cursor Rules for ApplyTrack
+# Shares guidelines with AGENTS.md and .agents/
+
+Please refer to:
+- `AGENTS.md` for overall architecture and multi-agent guidelines.
+- `.agents/rules/` for shared coding standards.

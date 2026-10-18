@@ -1,0 +1,14 @@
+# Windsurf & Cascade Rules for ApplyTrack
+
+All AI agents must strictly follow the universal project guardrails:
+- Single Source of Truth: [AGENTS.md](./AGENTS.md)
+- Guardrails Definition: [.agents/rules/guardrails.md](./.agents/rules/guardrails.md)
+
+Key Mandates:
+1. Zero Git/GitHub commands.
+2. Zero Docker commands.
+3. Zero file/code deletions without explicit permission.
+4. Zero terminal execution without permission.
+5. No destructive database commands.
+6. Strict workspace boundary (`d:\Backend Project\ApplyTrack\`).
+7. Plan approval first before writing code.

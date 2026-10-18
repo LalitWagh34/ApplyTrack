@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/hooks.json",
+  "applytrack-guardrails": {
+    "enabled": true,
+    "description": "Enforces strict security, git blocking, db protection, and workspace boundaries.",
+    "PreToolUse": [
+      {
+        "matcher": "run_command|write_to_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .agents/hooks/guardrail-enforcer.js",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

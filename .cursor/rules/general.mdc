@@ -1,0 +1,8 @@
+---
+description: General Coding Guidelines for ApplyTrack
+globs: *
+alwaysApply: true
+---
+
+# Universal Project Guidelines
+Refer to [AGENTS.md](../../AGENTS.md) and [.agents/rules/general.md](../../.agents/rules/general.md) as the single source of truth.
