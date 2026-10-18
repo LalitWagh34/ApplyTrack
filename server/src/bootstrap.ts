@@ -1,21 +1,83 @@
 /**
- * Bootstrap Initializer
- * Centralized startup sequence: validates configs, connects databases/queues,
- * registers workers, starts the Fastify server, and sets up graceful shutdown.
+ * Central Bootstrap Initializer
+ * Starts Fastify server, initializes BullMQ workers, binds lifecycle hooks, and manages graceful shutdowns
  */
+import { FastifyInstance } from 'fastify';
+import { env } from './config/env.js';
+import { buildApp } from './app.js';
+import { allQueues } from './config/bullmq.js';
+import { initEmailIngestWorker } from './queues/email-ingest.worker.js';
+import { initWatchRenewalWorker } from './queues/watch-renewal.worker.js';
+import { initFollowUpCronWorker } from './queues/followup-cron.worker.js';
 
-export async function bootstrap(): Promise<void> {
-  // 1. Validate environment & configurations
-  // 2. Initialize database connections (Prisma)
-  // 3. Initialize cache & message queues (Redis / BullMQ)
-  // 4. Register background workers & recurring schedulers
-  // 5. Build and start Fastify application server
-  // 6. Bind process signal listeners for graceful teardown
+let serverInstance: FastifyInstance | null = null;
+
+export async function bootstrap(): Promise<FastifyInstance> {
+  const app = await buildApp();
+  serverInstance = app;
+
+  // Initialize BullMQ Workers
+  const emailWorker = initEmailIngestWorker();
+  const watchWorker = initWatchRenewalWorker();
+  const followUpWorker = initFollowUpCronWorker();
+
+  try {
+    const address = await app.listen({
+      port: env.PORT,
+      host: '0.0.0.0'
+    });
+
+    app.log.info(`🚀 ApplyTrack API Server listening at: ${address}`);
+    app.log.info(`🩺 Health check available at: ${address}/health`);
+    app.log.info(`🌱 Environment: ${env.NODE_ENV}`);
+  } catch (err) {
+    app.log.error(err);
+    process.exit(1);
+  }
+
+  // Graceful Shutdown Registration
+  const handleSignal = async (signal: string) => {
+    app.log.info(`Received ${signal}. Initiating graceful shutdown...`);
+
+    // 1. Close BullMQ workers
+    try {
+      app.log.info('Closing BullMQ workers...');
+      await Promise.all([emailWorker.close(), watchWorker.close(), followUpWorker.close()]);
+      app.log.info('BullMQ workers closed.');
+    } catch (wErr) {
+      app.log.error({ wErr }, 'Error while closing workers:');
+    }
+
+    // 2. Pause and close BullMQ queues
+    try {
+      app.log.info('Closing BullMQ queues...');
+      await Promise.all(allQueues.map((q) => q.close()));
+      app.log.info('BullMQ queues closed.');
+    } catch (qErr) {
+      app.log.error({ qErr }, 'Error while closing queues:');
+    }
+
+    // 3. Close Fastify server (triggers onClose hooks for Prisma, Redis, etc.)
+    try {
+      await app.close();
+      app.log.info('Server closed cleanly. Goodbye!');
+      process.exit(0);
+    } catch (closeErr) {
+      app.log.error({ closeErr }, 'Error during server shutdown:');
+      process.exit(1);
+    }
+  };
+
+  process.once('SIGINT', () => void handleSignal('SIGINT'));
+  process.once('SIGTERM', () => void handleSignal('SIGTERM'));
+
+  return app;
 }
 
 export async function shutdown(): Promise<void> {
-  // 1. Stop accepting new HTTP connections
-  // 2. Pause and drain BullMQ worker queues
-  // 3. Disconnect Redis client
-  // 4. Disconnect Prisma database client
+  if (serverInstance) {
+    await serverInstance.close();
+  }
 }
+
+export default bootstrap;
