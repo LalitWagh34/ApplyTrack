@@ -1,0 +1,9 @@
+React 
+Typescript(latest)
+fastify
+Prisma
+PostgreSQL
+JWT
+BullMQ
+node.js
+Oxlint
