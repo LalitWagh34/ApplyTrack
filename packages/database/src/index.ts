@@ -6,6 +6,10 @@ import { PrismaClient } from '@prisma/client';
 
 export * from '@prisma/client';
 
+declare const process: {
+  env: Record<string, string | undefined>;
+};
+
 declare global {
   // eslint-disable-next-line no-var
   var __prismaClient: PrismaClient | undefined;
