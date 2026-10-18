@@ -1,7 +1,20 @@
 /**
- * Auth Request/Response Validation Schemas (Zod / JSON Schema)
+ * Auth Request/Response Validation Schemas
  */
 
-export const authSchemas = {
-  // Validation schemas for Google OAuth & session verification
+export const callbackQuerySchema = {
+  querystring: {
+    type: 'object',
+    properties: {
+      code: { type: 'string' },
+      error: { type: 'string' },
+      error_description: { type: 'string' }
+    }
+  }
 };
+
+export const authSchemas = {
+  callbackQuerySchema
+};
+
+export default authSchemas;
