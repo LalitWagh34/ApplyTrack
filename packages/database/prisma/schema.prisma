@@ -1,0 +1,137 @@
+// ApplyTrack Centralized Database Schema (@applytrack/database)
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ApplicationStatus {
+  APPLIED
+  OA_TEST
+  INTERVIEW
+  OFFER
+  REJECTED
+  GHOSTED
+}
+
+enum PriorityLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id                    String             @id @default(uuid())
+  email                 String             @unique
+  fullName              String?
+  encryptedGoogleToken  String?
+  googleHistoryId       String?
+  googleWatchExpiry     DateTime?
+  preferences           Json               @default("{}")
+  isArchived            Boolean            @default(false)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  applications          Application[]
+  followUpSettings      FollowUpSetting[]
+  pushSubscriptions     PushSubscription[]
+
+  @@index([email])
+  @@index([googleWatchExpiry])
+}
+
+model Application {
+  id               String            @id @default(uuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id])
+  
+  companyName      String
+  companyDomain    String?
+  roleTitle        String
+  location         String?
+  salaryRange      String?
+  jobUrl           String?
+  
+  status           ApplicationStatus @default(APPLIED)
+  priority         PriorityLevel     @default(MEDIUM)
+  appliedDate      DateTime          @default(now())
+  
+  gmailThreadId    String?           @unique
+  lastOutboundDate DateTime?
+  lastInboundDate  DateTime?
+  hasReply         Boolean           @default(false)
+  
+  nextFollowUpDate DateTime?
+  followUpCount    Int               @default(0)
+  
+  notes            String?
+  isArchived       Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  followUps        FollowUpLog[]
+  timeline         TimelineEvent[]
+
+  @@index([userId, status])
+  @@index([userId, nextFollowUpDate])
+  @@index([gmailThreadId])
+}
+
+model FollowUpLog {
+  id            String      @id @default(uuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+  
+  attemptNumber Int
+  sentDate      DateTime?
+  status        String      @default("PENDING")
+  draftBody     String?
+  
+  createdAt     DateTime    @default(now())
+
+  @@index([applicationId])
+}
+
+model TimelineEvent {
+  id            String      @id @default(uuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+  
+  eventType     String
+  description   String
+  metadata      Json        @default("{}")
+  
+  createdAt     DateTime    @default(now())
+
+  @@index([applicationId, createdAt])
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  endpoint  String   @unique
+  keys      Json
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model FollowUpSetting {
+  id                 String   @id @default(uuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id])
+  
+  firstNudgeDays     Int      @default(4)
+  secondNudgeDays    Int      @default(8)
+  breakupDays        Int      @default(14)
+  autoDraftEnabled   Boolean  @default(true)
+  
+  updatedAt          DateTime @updatedAt
+
+  @@index([userId])
+}
