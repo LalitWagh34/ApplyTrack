@@ -6,6 +6,15 @@ export interface User {
   id: string;
   email: string;
   fullName?: string | null;
+  avatarUrl?: string | null;
+  hasGoogleLinked?: boolean;
+  hasGithubLinked?: boolean;
+  preferences?: {
+    targetRole?: string;
+    topSkills?: string[];
+    portfolioLink?: string;
+    topProjects?: string[];
+  };
 }
 
 export interface AuthState {
