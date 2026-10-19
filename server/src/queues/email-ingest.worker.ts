@@ -80,6 +80,7 @@ export function initEmailIngestWorker(): Worker {
                 companyName: meta.companyName,
                 companyDomain: meta.companyDomain || null,
                 roleTitle: meta.subject || 'Application via Cold Email',
+                notes: 'Source: Cold Mail',
                 status: ApplicationStatus.APPLIED,
                 priority: PriorityLevel.MEDIUM,
                 appliedDate: meta.date,
@@ -107,42 +108,18 @@ export function initEmailIngestWorker(): Worker {
         }
       }
 
-      // 5. Process INBOUND Messages (Recruiter Reply Radar)
+      // 5. Process INBOUND Messages (Recruiter Reply & Stage Progression Radar)
       for (const messageId of changes.inboxMessageIds) {
         try {
           const meta = await gmailService.fetchMessageMetadata(user.id, messageId);
           if (!meta) continue;
 
-          // Check if this inbound message belongs to an active tracked application
-          const application = await prisma.application.findFirst({
-            where: {
-              userId: user.id,
-              gmailThreadId: meta.threadId,
-              isArchived: false
-            }
-          });
+          // Skip spam/transactional
+          if (gmailService.isTransactionalOrSpam(meta.from, meta.subject)) continue;
 
-          if (application && !application.hasReply) {
-            // Recruiter replied! Mark reply and cancel follow-up reminder
-            await prisma.application.update({
-              where: { id: application.id },
-              data: {
-                hasReply: true,
-                lastInboundDate: meta.date,
-                nextFollowUpDate: null, // Cancel follow-up countdown!
-                timeline: {
-                  create: {
-                    eventType: 'REPLY_RECEIVED',
-                    description: `Recruiter replied on thread! Follow-up countdown canceled.`,
-                    metadata: {
-                      sender: meta.from,
-                      subject: meta.subject
-                    }
-                  }
-                }
-              }
-            });
-
+          // Process 3-layer domain match and OA/Interview progression
+          const res = await gmailService.processInboundStageProgression(user.id, user.email, meta);
+          if (res.updated) {
             replyDetectedCount++;
           }
         } catch {
