@@ -97,6 +97,7 @@ export class ApplicationsService {
         location: data.location || null,
         salaryRange: data.salaryRange || null,
         jobUrl: data.jobUrl || null,
+        notes: data.notes || (data.source ? `Source: ${data.source}` : null),
         priority: (data.priority as PriorityLevel) || PriorityLevel.MEDIUM,
         status: ApplicationStatus.APPLIED,
         appliedDate: new Date(),
@@ -214,6 +215,28 @@ export class ApplicationsService {
     });
 
     return { archived: true, id: applicationId };
+  }
+
+  /**
+   * Batch soft-deletes applications (isArchived = true) - Complying with Guardrail 6
+   */
+  public async batchArchiveApplications(userId: string, applicationIds: string[]) {
+    if (!applicationIds || applicationIds.length === 0) {
+      return { count: 0 };
+    }
+
+    const result = await prisma.application.updateMany({
+      where: {
+        userId,
+        id: { in: applicationIds },
+        isArchived: false
+      },
+      data: {
+        isArchived: true
+      }
+    });
+
+    return { count: result.count };
   }
 
   /**

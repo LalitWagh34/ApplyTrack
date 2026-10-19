@@ -4,6 +4,7 @@
  */
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { applicationsService } from './applications.service.js';
+import { gmailService } from '../../services/gmail.service.js';
 import {
   CreateApplicationDTO,
   UpdateApplicationDTO,
@@ -119,6 +120,33 @@ export class ApplicationsController {
     }
 
     return reply.send(successResponse(result, 'Application archived successfully'));
+  }
+
+  /**
+   * Batch soft-delete applications
+   */
+  public async batchArchive(
+    request: FastifyRequest<{ Body: { ids: string[] } }>,
+    reply: FastifyReply
+  ) {
+    const userId = request.user.userId;
+    const { ids } = request.body;
+    const result = await applicationsService.batchArchiveApplications(userId, ids);
+    return reply.send(successResponse(result, `${result.count} application(s) archived successfully`));
+  }
+
+  /**
+   * On-demand sync of user's Gmail mailbox for recent applications
+   */
+  public async syncGmail(request: FastifyRequest, reply: FastifyReply) {
+    const userId = request.user.userId;
+    try {
+      const result = await gmailService.syncMailbox(userId);
+      return reply.send(successResponse(result, result.message));
+    } catch (err: any) {
+      request.log.error({ err }, 'Gmail on-demand sync error:');
+      return reply.status(500).send(errorResponse(err.message || 'Failed to sync Gmail'));
+    }
   }
 }
 

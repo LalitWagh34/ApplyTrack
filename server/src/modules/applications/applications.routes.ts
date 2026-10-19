@@ -9,7 +9,8 @@ import {
   updateStatusSchema,
   updateApplicationSchema,
   filterApplicationsSchema,
-  getByIdSchema
+  getByIdSchema,
+  batchArchiveSchema
 } from './applications.schemas.js';
 
 export async function applicationRoutes(fastify: FastifyInstance): Promise<void> {
@@ -36,6 +37,12 @@ export async function applicationRoutes(fastify: FastifyInstance): Promise<void>
 
   // Soft-delete application (isArchived = true)
   fastify.delete('/:id', { schema: getByIdSchema }, applicationsController.archive.bind(applicationsController));
+
+  // Batch soft-delete applications
+  fastify.post('/batch-delete', { schema: batchArchiveSchema }, applicationsController.batchArchive.bind(applicationsController));
+
+  // On-demand Gmail Sync (Indeed, Naukri, LinkedIn, cold emails)
+  fastify.post('/sync-gmail', applicationsController.syncGmail.bind(applicationsController));
 }
 
 export default applicationRoutes;

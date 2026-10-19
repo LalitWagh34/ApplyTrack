@@ -13,7 +13,9 @@ export const createApplicationSchema = {
       location: { type: 'string' },
       salaryRange: { type: 'string' },
       jobUrl: { type: 'string' },
-      priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH'], default: 'MEDIUM' }
+      priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH'], default: 'MEDIUM' },
+      notes: { type: 'string' },
+      source: { type: 'string' }
     }
   }
 };
@@ -81,6 +83,20 @@ export const getByIdSchema = {
     required: ['id'],
     properties: {
       id: { type: 'string', format: 'uuid' }
+    }
+  }
+};
+
+export const batchArchiveSchema = {
+  body: {
+    type: 'object',
+    required: ['ids'],
+    properties: {
+      ids: {
+        type: 'array',
+        items: { type: 'string', format: 'uuid' },
+        minItems: 1
+      }
     }
   }
 };

@@ -20,6 +20,8 @@ export interface CreateApplicationDTO {
   salaryRange?: string;
   jobUrl?: string;
   priority?: PriorityType;
+  notes?: string;
+  source?: string;
 }
 
 export interface UpdateApplicationDTO {
