@@ -9,6 +9,9 @@
   "scripts": {
     "dev:server": "npm run dev --workspace=applytrack-server",
     "dev:client": "npm run dev --workspace=applytrack-client",
+    "build:server": "npm run generate --workspace=@applytrack/database && npm run build --workspace=@applytrack/database && npm run build --workspace=applytrack-server",
+    "start:server": "npm run start --workspace=applytrack-server",
+    "build:client": "npm run build --workspace=applytrack-client",
     "db:generate": "npm run generate --workspace=@applytrack/database",
     "db:migrate": "npm run migrate --workspace=@applytrack/database",
     "lint": "oxlint"

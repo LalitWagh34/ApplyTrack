@@ -5,6 +5,7 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { authService } from './auth.service.js';
 import { successResponse, errorResponse } from '../../utils/apiResponse.js';
+import { env } from '../../config/env.js';
 
 export class AuthController {
   /**
@@ -22,7 +23,7 @@ export class AuthController {
     const { code, error } = request.query;
 
     if (error || !code) {
-      return reply.status(400).send(errorResponse(error || 'Missing authorization code from Google'));
+      return reply.redirect(`${env.CLIENT_URL}/?error=${encodeURIComponent(error || 'Missing authorization code from Google')}`);
     }
 
     try {
@@ -36,15 +37,10 @@ export class AuthController {
         avatarUrl: userProfile.avatarUrl
       });
 
-      return reply.send(
-        successResponse({
-          token,
-          user: userProfile
-        }, 'Google authentication successful')
-      );
-    } catch (err) {
+      return reply.redirect(`${env.CLIENT_URL}/?token=${encodeURIComponent(token)}`);
+    } catch (err: any) {
       request.log.error({ err }, 'Google callback error:');
-      return reply.status(500).send(errorResponse('Failed to authenticate with Google'));
+      return reply.redirect(`${env.CLIENT_URL}/?error=${encodeURIComponent(err.message || 'Failed to authenticate with Google')}`);
     }
   }
 
@@ -63,7 +59,7 @@ export class AuthController {
     const { code, error } = request.query;
 
     if (error || !code) {
-      return reply.status(400).send(errorResponse(error || 'Missing authorization code from GitHub'));
+      return reply.redirect(`${env.CLIENT_URL}/?error=${encodeURIComponent(error || 'Missing authorization code from GitHub')}`);
     }
 
     try {
@@ -77,15 +73,10 @@ export class AuthController {
         avatarUrl: userProfile.avatarUrl
       });
 
-      return reply.send(
-        successResponse({
-          token,
-          user: userProfile
-        }, 'GitHub authentication successful')
-      );
-    } catch (err) {
+      return reply.redirect(`${env.CLIENT_URL}/?token=${encodeURIComponent(token)}`);
+    } catch (err: any) {
       request.log.error({ err }, 'GitHub callback error:');
-      return reply.status(500).send(errorResponse('Failed to authenticate with GitHub'));
+      return reply.redirect(`${env.CLIENT_URL}/?error=${encodeURIComponent(err.message || 'Failed to authenticate with GitHub')}`);
     }
   }
 

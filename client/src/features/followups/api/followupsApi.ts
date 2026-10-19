@@ -2,8 +2,9 @@
  * Follow-Ups API Client
  */
 import { PendingFollowUp, FollowUpDraft } from '../types/followup.types.js';
+import { API_ENDPOINTS } from '../../../config/api.config.js';
 
-const API_BASE = '/api/v1/followups';
+const API_BASE = API_ENDPOINTS.FOLLOWUPS;
 
 function getAuthHeaders(): HeadersInit {
   const token = localStorage.getItem('applytrack_token');

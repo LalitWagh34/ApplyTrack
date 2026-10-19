@@ -3,8 +3,9 @@
  * Manages user profile updates and PDF resume parsing for AI Context
  */
 import { User } from '../../auth/types/auth.types.js';
+import { API_ENDPOINTS } from '../../../config/api.config.js';
 
-const API_BASE = '/api/v1/profile';
+const API_BASE = API_ENDPOINTS.PROFILE;
 
 function getAuthHeaders(): HeadersInit {
   const token = localStorage.getItem('applytrack_token');

@@ -2,6 +2,7 @@
  * Auth API Client
  */
 import { User } from '../types/auth.types.js';
+import { API_ENDPOINTS } from '../../../config/api.config.js';
 
 function getAuthHeaders(): HeadersInit {
   const token = localStorage.getItem('applytrack_token');
@@ -13,11 +14,11 @@ function getAuthHeaders(): HeadersInit {
 
 export const authApi = {
   getGoogleAuthUrl(): string {
-    return 'http://localhost:4000/api/v1/auth/google';
+    return API_ENDPOINTS.AUTH.GOOGLE;
   },
 
   getGitHubAuthUrl(): string {
-    return 'http://localhost:4000/api/v1/auth/github';
+    return API_ENDPOINTS.AUTH.GITHUB;
   },
 
   async getMe(): Promise<User | null> {
@@ -25,7 +26,7 @@ export const authApi = {
     if (!token) return null;
 
     try {
-      const res = await fetch('/api/v1/auth/me', {
+      const res = await fetch(API_ENDPOINTS.AUTH.ME, {
         headers: getAuthHeaders()
       });
       if (!res.ok) return null;
@@ -38,7 +39,7 @@ export const authApi = {
 
   async logout(): Promise<void> {
     try {
-      await fetch('/api/v1/auth/logout', {
+      await fetch(API_ENDPOINTS.AUTH.LOGOUT, {
         method: 'POST',
         headers: getAuthHeaders()
       });

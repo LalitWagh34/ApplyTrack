@@ -193,6 +193,7 @@ export class AuthService {
         avatarUrl: true,
         googleId: true,
         githubId: true,
+        preferences: true,
         createdAt: true
       }
     });
@@ -208,6 +209,7 @@ export class AuthService {
       avatarUrl: user.avatarUrl,
       hasGoogleLinked: Boolean(user.googleId),
       hasGithubLinked: Boolean(user.githubId),
+      preferences: user.preferences || {},
       createdAt: user.createdAt
     };
   }
