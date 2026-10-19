@@ -19,4 +19,6 @@ export interface FollowUpDraftResponse {
   subject: string;
   body: string;
   threadId: string;
+  isAiGenerated?: boolean;
 }
+

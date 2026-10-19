@@ -14,4 +14,6 @@ export interface FollowUpDraft {
   subject: string;
   body: string;
   threadId: string;
+  isAiGenerated?: boolean;
 }
+
