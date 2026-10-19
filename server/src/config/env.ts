@@ -12,7 +12,10 @@ const envSchema = z.object({
   // Server
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  CLIENT_URL: z.string().default('http://localhost:3000'),
+  CLIENT_URL: z
+    .string()
+    .transform((val) => val.trim().replace(/[\r\n\t\s]+/g, '').replace(/\/+$/, ''))
+    .default('http://localhost:3000'),
 
   // PostgreSQL Database
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
@@ -33,14 +36,20 @@ const envSchema = z.object({
   // Google OAuth & Gmail
   GOOGLE_CLIENT_ID: z.string().optional().default(''),
   GOOGLE_CLIENT_SECRET: z.string().optional().default(''),
-  GOOGLE_REDIRECT_URI: z.string().default('http://localhost:4000/api/v1/auth/google/callback'),
+  GOOGLE_REDIRECT_URI: z
+    .string()
+    .transform((val) => val.trim().replace(/[\r\n\t\s]+/g, ''))
+    .default('http://localhost:4000/api/v1/auth/google/callback'),
   GOOGLE_PUBSUB_TOPIC: z.string().optional().default(''),
   GOOGLE_PUBSUB_VERIFICATION_TOKEN: z.string().optional().default(''),
 
   // GitHub OAuth
   GITHUB_CLIENT_ID: z.string().optional().default(''),
   GITHUB_CLIENT_SECRET: z.string().optional().default(''),
-  GITHUB_REDIRECT_URI: z.string().default('http://localhost:4000/api/v1/auth/github/callback'),
+  GITHUB_REDIRECT_URI: z
+    .string()
+    .transform((val) => val.trim().replace(/[\r\n\t\s]+/g, ''))
+    .default('http://localhost:4000/api/v1/auth/github/callback'),
 
   // Web Push (VAPID)
   VAPID_PUBLIC_KEY: z.string().optional().default(''),

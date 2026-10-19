@@ -7,6 +7,16 @@ import { authService } from './auth.service.js';
 import { successResponse, errorResponse } from '../../utils/apiResponse.js';
 import { env } from '../../config/env.js';
 
+function buildClientRedirectUrl(pathAndQuery: string): string {
+  const base = (env.CLIENT_URL || 'http://localhost:3000')
+    .toString()
+    .trim()
+    .replace(/[\r\n\t\s]+/g, '')
+    .replace(/\/+$/, '');
+  const cleanPath = pathAndQuery.trim().replace(/[\r\n\t]+/g, '');
+  return `${base}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+}
+
 export class AuthController {
   /**
    * Redirects to Google OAuth consent screen
@@ -23,7 +33,7 @@ export class AuthController {
     const { code, error } = request.query;
 
     if (error || !code) {
-      return reply.redirect(`${env.CLIENT_URL}/?error=${encodeURIComponent(error || 'Missing authorization code from Google')}`);
+      return reply.redirect(buildClientRedirectUrl(`/?error=${encodeURIComponent(error || 'Missing authorization code from Google')}`));
     }
 
     try {
@@ -37,10 +47,10 @@ export class AuthController {
         avatarUrl: userProfile.avatarUrl
       });
 
-      return reply.redirect(`${env.CLIENT_URL}/?token=${encodeURIComponent(token)}`);
+      return reply.redirect(buildClientRedirectUrl(`/?token=${encodeURIComponent(token)}`));
     } catch (err: any) {
       request.log.error({ err }, 'Google callback error:');
-      return reply.redirect(`${env.CLIENT_URL}/?error=${encodeURIComponent(err.message || 'Failed to authenticate with Google')}`);
+      return reply.redirect(buildClientRedirectUrl(`/?error=${encodeURIComponent(err.message || 'Failed to authenticate with Google')}`));
     }
   }
 
@@ -59,7 +69,7 @@ export class AuthController {
     const { code, error } = request.query;
 
     if (error || !code) {
-      return reply.redirect(`${env.CLIENT_URL}/?error=${encodeURIComponent(error || 'Missing authorization code from GitHub')}`);
+      return reply.redirect(buildClientRedirectUrl(`/?error=${encodeURIComponent(error || 'Missing authorization code from GitHub')}`));
     }
 
     try {
@@ -73,10 +83,10 @@ export class AuthController {
         avatarUrl: userProfile.avatarUrl
       });
 
-      return reply.redirect(`${env.CLIENT_URL}/?token=${encodeURIComponent(token)}`);
+      return reply.redirect(buildClientRedirectUrl(`/?token=${encodeURIComponent(token)}`));
     } catch (err: any) {
       request.log.error({ err }, 'GitHub callback error:');
-      return reply.redirect(`${env.CLIENT_URL}/?error=${encodeURIComponent(err.message || 'Failed to authenticate with GitHub')}`);
+      return reply.redirect(buildClientRedirectUrl(`/?error=${encodeURIComponent(err.message || 'Failed to authenticate with GitHub')}`));
     }
   }
 
