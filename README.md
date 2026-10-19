@@ -1,6 +1,6 @@
 # 🎯 ApplyTrack
 
-> **A Cal AI / Linear-style minimal job application tracker with Zero-Effort Gmail Sync, AI Follow-Up Ghostwriter, and PWA Mobile Share Target.**
+> ** Linear-style minimal job application tracker with Zero-Effort Gmail Sync, AI Follow-Up Ghostwriter, and PWA Mobile Share Target.**
 
 [![Live Frontend](https://img.shields.io/badge/Frontend-Vercel-black?style=flat&logo=vercel)](https://apply-track-1h5z.vercel.app/)
 [![Backend API](https://img.shields.io/badge/Backend-Render-46E3B7?style=flat&logo=render&logoColor=white)](https://applytrack-580j.onrender.com/health)
