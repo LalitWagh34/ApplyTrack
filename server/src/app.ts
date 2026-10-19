@@ -15,11 +15,13 @@ import { authRoutes } from './modules/auth/auth.routes.js';
 import { applicationRoutes } from './modules/applications/applications.routes.js';
 import { webhookRoutes } from './modules/webhooks/webhooks.routes.js';
 import { followUpRoutes } from './modules/followups/followups.routes.js';
+import { profileRoutes } from './modules/profile/profile.routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
     logger: loggerConfig,
-    disableRequestLogging: false
+    disableRequestLogging: false,
+    bodyLimit: 15 * 1024 * 1024 // 15MB limit to allow PDF base64 payloads
   });
 
   // Global Error Handler
@@ -83,6 +85,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(applicationRoutes, { prefix: '/api/v1/applications' });
   await app.register(webhookRoutes, { prefix: '/api/v1/webhooks' });
   await app.register(followUpRoutes, { prefix: '/api/v1/followups' });
+  await app.register(profileRoutes, { prefix: '/api/v1/profile' });
 
   return app;
 }
