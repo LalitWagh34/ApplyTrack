@@ -15,5 +15,8 @@
     "db:generate": "npm run generate --workspace=@applytrack/database",
     "db:migrate": "npm run migrate --workspace=@applytrack/database",
     "lint": "oxlint"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }
