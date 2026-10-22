@@ -626,6 +626,43 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Mobile-Friendly Legal Links */}
+        <div
+          style={{
+            padding: '8px 20px',
+            backgroundColor: 'var(--bg-surface)',
+            borderTop: '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px',
+            fontSize: '0.72rem',
+            color: 'var(--text-muted)'
+          }}
+        >
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+          >
+            Privacy Policy
+          </a>
+          <span>•</span>
+          <a
+            href="/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+          >
+            Terms of Service
+          </a>
+        </div>
       </div>
     </div>
   );
