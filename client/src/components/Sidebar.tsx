@@ -415,6 +415,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span>Sign In</span>
           </button>
         )}
+
+        {/* Legal Links Footer */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.68rem', color: 'var(--text-muted)', paddingTop: '2px' }}>
+          <a href="/privacy" style={{ color: 'var(--text-muted)', textDecoration: 'none' }} onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')} onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}>
+            Privacy Policy
+          </a>
+          <span>•</span>
+          <a href="/terms" style={{ color: 'var(--text-muted)', textDecoration: 'none' }} onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')} onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}>
+            Terms
+          </a>
+        </div>
       </div>
     </aside>
   );

@@ -20,6 +20,8 @@ import { ApplicationModal } from './features/applications/components/Application
 import { AddApplicationModal, AddApplicationModalInitialData } from './features/applications/components/AddApplicationModal.js';
 import { LoginModal } from './features/auth/components/LoginModal.js';
 import { ProfilePopover } from './features/profile/components/ProfilePopover.js';
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage.js';
+import { TermsOfServicePage } from './pages/TermsOfServicePage.js';
 
 import { applicationsApi } from './features/applications/api/applicationsApi.js';
 import { followupsApi } from './features/followups/api/followupsApi.js';
@@ -485,9 +487,21 @@ export function AppContent() {
 }
 
 export default function App() {
+  const path = window.location.pathname.toLowerCase().replace(/\/+$/, '');
+
+  const renderContent = () => {
+    if (path === '/privacy' || path === '/privacy-policy') {
+      return <PrivacyPolicyPage />;
+    }
+    if (path === '/terms' || path === '/terms-of-service') {
+      return <TermsOfServicePage />;
+    }
+    return <AppContent />;
+  };
+
   return (
     <ThemeProvider>
-      <AppContent />
+      {renderContent()}
     </ThemeProvider>
   );
 }

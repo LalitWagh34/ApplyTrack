@@ -145,10 +145,21 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Privacy Note */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-          <ShieldCheck size={14} style={{ color: 'var(--stage-offer)' }} />
-          <span>Zero email body storage. Metadata & encrypted tokens only.</span>
+        {/* Privacy Note & Public Legal Links */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ShieldCheck size={14} style={{ color: 'var(--stage-offer)' }} />
+            <span>Zero email body storage. Metadata & encrypted tokens only.</span>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', paddingLeft: '22px' }}>
+            <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+              Privacy Policy
+            </a>
+            <span>•</span>
+            <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+              Terms of Service
+            </a>
+          </div>
         </div>
       </div>
     </div>
