@@ -160,7 +160,7 @@ export const TermsOfServicePage: React.FC = () => {
               5. Contact Us
             </h2>
             <p style={{ margin: 0 }}>
-              For legal inquiries regarding these terms, contact <a href="mailto:support@applytrack.dev" style={{ color: 'var(--accent)' }}>support@applytrack.dev</a>.
+              For legal inquiries regarding these terms, contact <a href="mailto:lalitwagh2804@gmail.com" style={{ color: 'var(--accent)' }}>lalitwagh2804@gmail.com</a>.
             </p>
           </section>
         </div>

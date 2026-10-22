@@ -54,7 +54,7 @@ const envSchema = z.object({
   // Web Push (VAPID)
   VAPID_PUBLIC_KEY: z.string().optional().default(''),
   VAPID_PRIVATE_KEY: z.string().optional().default(''),
-  VAPID_SUBJECT: z.string().default('mailto:support@applytrack.dev')
+  VAPID_SUBJECT: z.string().default('mailto:lalitwagh2804@gmail.com')
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

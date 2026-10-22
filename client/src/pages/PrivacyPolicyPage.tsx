@@ -237,7 +237,7 @@ export const PrivacyPolicyPage: React.FC = () => {
                   Google Security Permissions
                 </a>.
               </li>
-              <li><strong>Account Deletion:</strong> You may request complete deletion of your account, job records, and token vault by contacting us at <code>support@applytrack.dev</code>.</li>
+              <li><strong>Account Deletion:</strong> You may request complete deletion of your account, job records, and token vault by contacting us at <code>lalitwagh2804@gmail.com</code>.</li>
             </ul>
           </section>
 
@@ -256,7 +256,7 @@ export const PrivacyPolicyPage: React.FC = () => {
             <p style={{ margin: 0 }}>
               If you have any questions, feedback, or concerns regarding this Privacy Policy or your data, please contact us at:
               <br />
-              <strong>Email:</strong> <a href="mailto:support@applytrack.dev" style={{ color: 'var(--accent)' }}>support@applytrack.dev</a>
+              <strong>Email:</strong> <a href="mailto:lalitwagh2804@gmail.com" style={{ color: 'var(--accent)' }}>lalitwagh2804@gmail.com</a>
               <br />
               <strong>Application:</strong> ApplyTrack (https://apply-track-1h5z.vercel.app)
             </p>
