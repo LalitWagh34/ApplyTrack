@@ -23,17 +23,39 @@ export const authApi = {
 
   async getMe(): Promise<User | null> {
     const token = localStorage.getItem('applytrack_token');
-    if (!token) return null;
+    if (!token) {
+      localStorage.removeItem('applytrack_user');
+      return null;
+    }
 
     try {
       const res = await fetch(API_ENDPOINTS.AUTH.ME, {
         headers: getAuthHeaders()
       });
-      if (!res.ok) return null;
+
+      if (res.status === 401) {
+        // Token is genuinely expired or invalidated by server
+        localStorage.removeItem('applytrack_token');
+        localStorage.removeItem('applytrack_user');
+        return null;
+      }
+
+      if (!res.ok) {
+        // Server cold-start (502/503/504) or temporary failure - keep session intact
+        const cached = localStorage.getItem('applytrack_user');
+        return cached ? JSON.parse(cached) : null;
+      }
+
       const json = await res.json();
-      return json.data || null;
-    } catch {
+      if (json.data) {
+        localStorage.setItem('applytrack_user', JSON.stringify(json.data));
+        return json.data;
+      }
       return null;
+    } catch {
+      // Network drop or Render waking up - preserve cached user so user is not kicked out
+      const cached = localStorage.getItem('applytrack_user');
+      return cached ? JSON.parse(cached) : null;
     }
   },
 
@@ -45,6 +67,7 @@ export const authApi = {
       });
     } finally {
       localStorage.removeItem('applytrack_token');
+      localStorage.removeItem('applytrack_user');
     }
   }
 };

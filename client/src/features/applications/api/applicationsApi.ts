@@ -20,11 +20,25 @@ export const applicationsApi = {
     if (filters?.status) params.append('status', filters.status);
     if (filters?.search) params.append('search', filters.search);
 
-    const res = await fetch(`${API_BASE}?${params.toString()}`, {
-      headers: getAuthHeaders()
-    });
-    const json = await res.json();
-    return json.data || { applications: [], totalCount: 0 };
+    try {
+      const res = await fetch(`${API_BASE}?${params.toString()}`, {
+        headers: getAuthHeaders()
+      });
+      if (!res.ok) {
+        const cached = localStorage.getItem('applytrack_applications');
+        const apps = cached ? JSON.parse(cached) : [];
+        return { applications: apps, totalCount: apps.length };
+      }
+      const json = await res.json();
+      if (json.data?.applications && !filters?.status && !filters?.search) {
+        localStorage.setItem('applytrack_applications', JSON.stringify(json.data.applications));
+      }
+      return json.data || { applications: [], totalCount: 0 };
+    } catch {
+      const cached = localStorage.getItem('applytrack_applications');
+      const apps = cached ? JSON.parse(cached) : [];
+      return { applications: apps, totalCount: apps.length };
+    }
   },
 
   async getMetrics(): Promise<Record<string, number>> {

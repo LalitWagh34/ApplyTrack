@@ -28,7 +28,7 @@ const envSchema = z.object({
 
   // JWT
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
-  JWT_EXPIRES_IN: z.string().default('7d'),
+  JWT_EXPIRES_IN: z.string().default('30d'),
 
   // Token Encryption Vault (AES-256-GCM)
   TOKEN_ENCRYPTION_KEY: z.string().length(64, 'TOKEN_ENCRYPTION_KEY must be a 64-character hex string (32 bytes)'),

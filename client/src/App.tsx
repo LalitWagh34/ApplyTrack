@@ -31,7 +31,14 @@ import { User } from './features/auth/types/auth.types.js';
 import { Filter, ArrowUpDown } from 'lucide-react';
 
 export function AppContent() {
-  const [applications, setApplications] = useState<Application[]>([]);
+  const [applications, setApplications] = useState<Application[]>(() => {
+    try {
+      const saved = localStorage.getItem('applytrack_applications');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [pendingFollowUps, setPendingFollowUps] = useState<PendingFollowUp[]>([]);
   const [activeView, setActiveView] = useState<ActiveNavView>('board');
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,7 +48,14 @@ export function AppContent() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [shareInitialData, setShareInitialData] = useState<AddApplicationModalInitialData | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const saved = localStorage.getItem('applytrack_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [isSyncing, setIsSyncing] = useState(false);
 
   const handleSyncGmail = async () => {
@@ -76,25 +90,43 @@ export function AppContent() {
 
   // Fetch applications & user profile from backend
   const fetchData = useCallback(async () => {
+    const hasToken = Boolean(localStorage.getItem('applytrack_token'));
+    if (!hasToken) {
+      setUser(null);
+      setApplications([]);
+      setPendingFollowUps([]);
+      return;
+    }
+
     try {
       const currentUser = await authApi.getMe();
       if (currentUser) {
         setUser(currentUser);
-        const [appsRes, followupsRes] = await Promise.all([
+        const [appsRes, followupsRes] = await Promise.allSettled([
           applicationsApi.list(),
           followupsApi.getPending()
         ]);
-        setApplications(appsRes.applications || []);
-        setPendingFollowUps(followupsRes || []);
+        if (appsRes.status === 'fulfilled' && appsRes.value?.applications) {
+          setApplications(appsRes.value.applications);
+        }
+        if (followupsRes.status === 'fulfilled' && Array.isArray(followupsRes.value)) {
+          setPendingFollowUps(followupsRes.value);
+        }
       } else {
+        // Only reset if token was removed due to 401 Unauthorized
+        if (!localStorage.getItem('applytrack_token')) {
+          setUser(null);
+          setApplications([]);
+          setPendingFollowUps([]);
+        }
+      }
+    } catch {
+      // On temporary network drop or Render cold-start, keep cached user session
+      if (!localStorage.getItem('applytrack_token')) {
         setUser(null);
         setApplications([]);
         setPendingFollowUps([]);
       }
-    } catch {
-      setUser(null);
-      setApplications([]);
-      setPendingFollowUps([]);
     }
   }, []);
 
@@ -247,6 +279,7 @@ export function AppContent() {
           setUser(null);
           setApplications([]);
           setPendingFollowUps([]);
+          localStorage.removeItem('applytrack_applications');
         }}
         selectedPriority={selectedPriority}
         setSelectedPriority={setSelectedPriority}
@@ -271,6 +304,7 @@ export function AppContent() {
             setUser(null);
             setApplications([]);
             setPendingFollowUps([]);
+            localStorage.removeItem('applytrack_applications');
           }}
           onSyncGmail={handleSyncGmail}
           isSyncing={isSyncing}
