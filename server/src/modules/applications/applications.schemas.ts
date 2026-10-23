@@ -14,6 +14,8 @@ export const createApplicationSchema = {
       salaryRange: { type: 'string' },
       jobUrl: { type: 'string' },
       priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH'], default: 'MEDIUM' },
+      status: { type: 'string', enum: ['APPLIED', 'OA_TEST', 'INTERVIEW', 'OFFER', 'REJECTED', 'GHOSTED'], default: 'APPLIED' },
+      stageDueDate: { type: ['string', 'null'] },
       notes: { type: 'string' },
       source: { type: 'string' }
     }
@@ -57,7 +59,9 @@ export const updateApplicationSchema = {
       location: { type: 'string' },
       salaryRange: { type: 'string' },
       jobUrl: { type: 'string' },
+      status: { type: 'string', enum: ['APPLIED', 'OA_TEST', 'INTERVIEW', 'OFFER', 'REJECTED', 'GHOSTED'] },
       priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH'] },
+      stageDueDate: { type: ['string', 'null'] },
       notes: { type: 'string' }
     }
   }

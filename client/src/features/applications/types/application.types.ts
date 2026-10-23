@@ -25,6 +25,7 @@ export interface Application {
   status: ApplicationStatus;
   priority: PriorityLevel;
   appliedDate: string;
+  stageDueDate?: string | null;
   nextFollowUpDate?: string | null;
   followUpCount: number;
   hasReply: boolean;

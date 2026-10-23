@@ -19,16 +19,23 @@ export interface CreateApplicationDTO {
   location?: string;
   salaryRange?: string;
   jobUrl?: string;
+  status?: ApplicationStatusType;
   priority?: PriorityType;
+  stageDueDate?: string | Date | null;
   notes?: string;
   source?: string;
 }
 
 export interface UpdateApplicationDTO {
   companyName?: string;
+  companyDomain?: string;
   roleTitle?: string;
+  location?: string;
+  salaryRange?: string;
+  jobUrl?: string;
   status?: ApplicationStatusType;
   priority?: PriorityType;
+  stageDueDate?: string | Date | null;
   notes?: string;
 }
 

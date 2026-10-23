@@ -345,7 +345,28 @@ export const ApplicationsListView: React.FC<ApplicationsListViewProps> = ({
 
                   {/* Status */}
                   <td style={{ padding: '12px 16px' }}>
-                    {getStatusPill(app.status)}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                      {getStatusPill(app.status)}
+                      {app.stageDueDate && (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '0.68rem',
+                            color: 'var(--text-secondary)',
+                            backgroundColor: 'var(--bg-subtle)',
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            border: '1px solid var(--border-color)',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          <Clock size={10} style={{ opacity: 0.7 }} />
+                          Due {new Date(app.stageDueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   {/* Priority */}

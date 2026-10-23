@@ -67,6 +67,8 @@ export const applicationsApi = {
     priority?: PriorityLevel;
     notes?: string;
     source?: string;
+    status?: ApplicationStatus;
+    stageDueDate?: string;
   }): Promise<Application> {
     const res = await fetch(API_BASE, {
       method: 'POST',

@@ -558,6 +558,43 @@ export class GmailService {
   }
 
   /**
+   * Intelligently extracts assessment deadlines or scheduled interview dates from email text
+   */
+  public extractDueDateFromEmail(text: string, emailDate: Date): Date | null {
+    const content = text.toLowerCase();
+
+    // 1. Check relative durations: "within 48 hours", "next 48 hours", "within 3 days", "in 2 days"
+    const hourMatch = content.match(/(?:within|next|in)\s+(\d+)\s*(?:hours|hrs|hr)/i);
+    if (hourMatch && hourMatch[1]) {
+      const hours = parseInt(hourMatch[1], 10);
+      if (!isNaN(hours) && hours > 0 && hours <= 168) {
+        return new Date(emailDate.getTime() + hours * 60 * 60 * 1000);
+      }
+    }
+
+    const dayMatch = content.match(/(?:within|next|in)\s+(\d+)\s*(?:days|day)/i);
+    if (dayMatch && dayMatch[1]) {
+      const days = parseInt(dayMatch[1], 10);
+      if (!isNaN(days) && days > 0 && days <= 30) {
+        return new Date(emailDate.getTime() + days * 24 * 60 * 60 * 1000);
+      }
+    }
+
+    // 2. Check explicit date patterns: "deadline: Oct 28", "due by Oct 28", "complete by 28th Oct"
+    const explicitMatch = content.match(/(?:deadline|due\s+date|due\s+by|complete\s+by|submit\s+by|before|on\s+or\s+before|expires\s+on|scheduled\s+for|scheduled\s+on)\s*[:\-]?\s*([A-Za-z]{3,9}\s+\d{1,2}(?:st|nd|rd|th)?|\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?[A-Za-z]{3,9})/i);
+    if (explicitMatch && explicitMatch[1]) {
+      const cleanedDateStr = explicitMatch[1].replace(/(?:st|nd|rd|th)/gi, '');
+      const currentYear = emailDate.getFullYear();
+      const parsed = new Date(`${cleanedDateStr} ${currentYear}`);
+      if (!isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Processes inbound recruiter email for stage progression and reply tracking
    */
   public async processInboundStageProgression(
@@ -610,6 +647,17 @@ export class GmailService {
       stageChanged = true;
       newStage = detectedStage;
 
+      // Automatically extract or compute stage due date from email text
+      if (detectedStage === ApplicationStatus.OA_TEST) {
+        const extractedDueDate = this.extractDueDateFromEmail(`${meta.subject} ${meta.snippet}`, meta.date);
+        updates.stageDueDate = extractedDueDate || new Date(meta.date.getTime() + 48 * 60 * 60 * 1000);
+      } else if (detectedStage === ApplicationStatus.INTERVIEW) {
+        const extractedDueDate = this.extractDueDateFromEmail(`${meta.subject} ${meta.snippet}`, meta.date);
+        if (extractedDueDate) {
+          updates.stageDueDate = extractedDueDate;
+        }
+      }
+
       await prisma.application.update({
         where: { id: app.id },
         data: {
@@ -631,6 +679,14 @@ export class GmailService {
 
       console.log(`[StageProgression] 🎯 Advanced ${app.companyName} from ${app.status} to ${detectedStage}!`);
     } else {
+      // If current stage is OA or Interview, check if this follow-up email mentions a deadline
+      if (app.status === ApplicationStatus.OA_TEST || app.status === ApplicationStatus.INTERVIEW) {
+        const extractedDueDate = this.extractDueDateFromEmail(`${meta.subject} ${meta.snippet}`, meta.date);
+        if (extractedDueDate) {
+          updates.stageDueDate = extractedDueDate;
+        }
+      }
+
       // Record reply without changing stage
       await prisma.application.update({
         where: { id: app.id },
@@ -773,6 +829,7 @@ export class GmailService {
           }
 
           const initialFollowUp = new Date(meta.date.getTime() + 7 * 24 * 60 * 60 * 1000);
+          const extractedDueDate = this.extractDueDateFromEmail(`${meta.subject} ${meta.snippet}`, meta.date);
 
           const detectedSource = portal.isApplication
             ? (meta.from.toLowerCase().includes('indeed') || meta.from.toLowerCase().includes('naukri') ? 'Indeed / Naukri' : meta.from.toLowerCase().includes('linkedin') ? 'LinkedIn' : 'Careers Page')
@@ -788,6 +845,7 @@ export class GmailService {
               status: 'APPLIED',
               priority: 'MEDIUM',
               appliedDate: meta.date,
+              stageDueDate: extractedDueDate,
               gmailThreadId: meta.threadId,
               lastOutboundDate: meta.date,
               nextFollowUpDate: initialFollowUp,

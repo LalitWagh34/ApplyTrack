@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { applicationsApi } from '../api/applicationsApi.js';
 import { PriorityLevel } from '../types/application.types.js';
-import { X, Plus, Sparkles, Globe, Link2, Building2, Briefcase, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Plus, Sparkles, Globe, Link2, Building2, Briefcase, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 
 export interface AddApplicationModalInitialData {
   companyName?: string;
@@ -89,6 +89,7 @@ export const AddApplicationModal: React.FC<AddApplicationModalProps> = ({
   const [location, setLocation] = useState('');
   const [salaryRange, setSalaryRange] = useState('');
   const [priority, setPriority] = useState<PriorityLevel>('MEDIUM');
+  const [stageDueDate, setStageDueDate] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -161,6 +162,7 @@ export const AddApplicationModal: React.FC<AddApplicationModalProps> = ({
       setLocation('');
       setSalaryRange('');
       setPriority('MEDIUM');
+      setStageDueDate('');
       setShowMore(false);
       setError('');
     }
@@ -187,7 +189,8 @@ export const AddApplicationModal: React.FC<AddApplicationModalProps> = ({
         source,
         location: location.trim() || undefined,
         salaryRange: salaryRange.trim() || undefined,
-        priority
+        priority,
+        stageDueDate: stageDueDate ? new Date(stageDueDate).toISOString() : undefined
       });
 
       onSuccess();
@@ -538,6 +541,31 @@ export const AddApplicationModal: React.FC<AddApplicationModalProps> = ({
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                      <Calendar size={12} />
+                      Stage Due Date / Deadline (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      value={stageDueDate}
+                      onChange={(e) => setStageDueDate(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '7px 10px',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-subtle)',
+                        color: 'var(--text-primary)',
+                        fontSize: '0.8rem',
+                        outline: 'none'
+                      }}
+                    />
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px', display: 'block' }}>
+                      Auto-detected from email sync or can be set manually for OA/Interview stages.
+                    </span>
                   </div>
                 </div>
               )}

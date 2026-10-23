@@ -25,6 +25,15 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
   const [notes, setNotes] = useState(application.notes || '');
   const [status, setStatus] = useState<ApplicationStatus>(application.status);
   const [priority, setPriority] = useState<PriorityLevel>(application.priority);
+  const [stageDueDate, setStageDueDate] = useState(() => {
+    if (!application.stageDueDate) return '';
+    try {
+      const d = new Date(application.stageDueDate);
+      return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : '';
+    } catch {
+      return '';
+    }
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
 
@@ -34,7 +43,8 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
       await applicationsApi.update(application.id, {
         notes,
         status,
-        priority
+        priority,
+        stageDueDate: stageDueDate ? new Date(stageDueDate).toISOString() : null
       });
       onUpdateSuccess();
       onClose();
@@ -140,8 +150,8 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
 
         {/* Modal Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px' }}>
-          {/* Controls: Stage & Priority */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
+          {/* Controls: Stage, Priority & Due Date */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px', marginBottom: '20px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 Stage Status
@@ -191,6 +201,27 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
                 <option value="MEDIUM">Medium</option>
                 <option value="HIGH">High</option>
               </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                {status === 'INTERVIEW' ? 'Interview Date' : 'Assessment Due Date'}
+              </label>
+              <input
+                type="date"
+                value={stageDueDate}
+                onChange={(e) => setStageDueDate(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.82rem',
+                  outline: 'none'
+                }}
+              />
             </div>
           </div>
 

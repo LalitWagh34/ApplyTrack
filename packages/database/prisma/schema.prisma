@@ -65,6 +65,7 @@ model Application {
   status           ApplicationStatus @default(APPLIED)
   priority         PriorityLevel     @default(MEDIUM)
   appliedDate      DateTime          @default(now())
+  stageDueDate     DateTime?
   
   gmailThreadId    String?           @unique
   lastOutboundDate DateTime?

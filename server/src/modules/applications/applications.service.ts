@@ -99,14 +99,15 @@ export class ApplicationsService {
         jobUrl: data.jobUrl || null,
         notes: data.notes || (data.source ? `Source: ${data.source}` : null),
         priority: (data.priority as PriorityLevel) || PriorityLevel.MEDIUM,
-        status: ApplicationStatus.APPLIED,
+        status: (data.status as ApplicationStatus) || ApplicationStatus.APPLIED,
         appliedDate: new Date(),
+        stageDueDate: data.stageDueDate ? new Date(data.stageDueDate) : null,
         nextFollowUpDate: initialFollowUp,
         timeline: {
           create: {
             eventType: 'STATUS_CHANGED',
             description: `Applied to ${data.companyName} for ${data.roleTitle}`,
-            metadata: { stage: ApplicationStatus.APPLIED }
+            metadata: { stage: data.status || ApplicationStatus.APPLIED }
           }
         }
       },
@@ -164,7 +165,7 @@ export class ApplicationsService {
   }
 
   /**
-   * Updates application metadata (notes, salary, role, priority)
+   * Updates application metadata (notes, salary, role, priority, stageDueDate)
    */
   public async updateApplication(userId: string, applicationId: string, data: UpdateApplicationDTO) {
     const existing = await prisma.application.findFirst({
@@ -179,9 +180,14 @@ export class ApplicationsService {
       where: { id: applicationId },
       data: {
         ...(data.companyName && { companyName: data.companyName }),
+        ...(data.companyDomain !== undefined && { companyDomain: data.companyDomain }),
         ...(data.roleTitle && { roleTitle: data.roleTitle }),
+        ...(data.location !== undefined && { location: data.location }),
+        ...(data.salaryRange !== undefined && { salaryRange: data.salaryRange }),
+        ...(data.jobUrl !== undefined && { jobUrl: data.jobUrl }),
         ...(data.status && { status: data.status as ApplicationStatus }),
         ...(data.priority && { priority: data.priority as PriorityLevel }),
+        ...(data.stageDueDate !== undefined && { stageDueDate: data.stageDueDate ? new Date(data.stageDueDate) : null }),
         ...(data.notes !== undefined && { notes: data.notes })
       }
     });

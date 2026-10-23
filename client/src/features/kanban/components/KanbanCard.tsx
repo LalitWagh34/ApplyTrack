@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import { Application } from '../../applications/types/application.types.js';
-import { MapPin, DollarSign, Clock, AlertCircle, Trash2 } from 'lucide-react';
+import { MapPin, DollarSign, Clock, Calendar, AlertCircle, Trash2 } from 'lucide-react';
 
 interface KanbanCardProps {
   application: Application;
@@ -25,6 +25,20 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
     !application.hasReply &&
     application.status !== 'OFFER' &&
     application.status !== 'REJECTED';
+
+  const formatDueDate = (dateStr: string, status: string) => {
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return 'Due soon';
+      const formatted = d.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric'
+      });
+      return status === 'INTERVIEW' ? `Interview ${formatted}` : `Due ${formatted}`;
+    } catch {
+      return 'Due date set';
+    }
+  };
 
   const formatRelativeDate = (dateStr: string) => {
     const diffDays = Math.floor(
@@ -120,8 +134,25 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
         {application.roleTitle}
       </p>
 
-      {/* Meta Pills (Domain, Source, Location, Salary) */}
+      {/* Meta Pills (Domain, Due Date, Source, Location, Salary) */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+        {application.stageDueDate && (
+          <span
+            className="badge"
+            title={`Scheduled / Due Date: ${new Date(application.stageDueDate).toLocaleDateString()}`}
+            style={{
+              backgroundColor: 'var(--bg-subtle)',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--border-color)',
+              fontSize: '0.68rem',
+              fontWeight: 500
+            }}
+          >
+            <Calendar size={10} />
+            {formatDueDate(application.stageDueDate, application.status)}
+          </span>
+        )}
+
         {application.companyDomain && (
           <span
             className="badge"
