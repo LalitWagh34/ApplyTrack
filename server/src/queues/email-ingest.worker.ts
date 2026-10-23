@@ -70,7 +70,21 @@ export function initEmailIngestWorker(): Worker {
             }
           });
 
-          if (!existing && meta.isLikelyJobApplication) {
+          if (existing) {
+            if (existing.isArchived) {
+              await prisma.application.update({
+                where: { id: existing.id },
+                data: {
+                  isArchived: false,
+                  status: ApplicationStatus.APPLIED
+                }
+              });
+              newTrackedCount++;
+            }
+            continue;
+          }
+
+          if (meta.isLikelyJobApplication) {
             // Auto-create application card
             const initialFollowUp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 

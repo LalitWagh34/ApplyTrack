@@ -713,17 +713,36 @@ export class GmailService {
             continue; // Handled as an existing card update!
           }
 
-          // Check if thread or message already exists
+          // Check if thread or message already exists (active or archived)
           const existing = await prisma.application.findFirst({
             where: {
               userId,
-              gmailThreadId: meta.threadId,
-              isArchived: false
+              gmailThreadId: meta.threadId
             }
           });
 
           if (existing) {
-            console.log(`[GmailSync] Thread ${meta.threadId} already tracked (${existing.companyName}). Skipping.`);
+            if (existing.isArchived) {
+              // User previously deleted it, but now explicitly triggered Sync Gmail again!
+              // Restore it so it reappears on their pipeline
+              await prisma.application.update({
+                where: { id: existing.id },
+                data: {
+                  isArchived: false,
+                  status: 'APPLIED',
+                  timeline: {
+                    create: {
+                      eventType: 'EMAIL_SENT',
+                      description: `Re-imported application to ${existing.companyName} via Gmail Sync`
+                    }
+                  }
+                }
+              });
+              console.log(`[GmailSync] ♻️ Restored previously archived application for ${existing.companyName}!`);
+              syncedCount++;
+            } else {
+              console.log(`[GmailSync] Thread ${meta.threadId} already tracked (${existing.companyName}). Skipping.`);
+            }
             continue;
           }
 
