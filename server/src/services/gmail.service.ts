@@ -400,14 +400,102 @@ export class GmailService {
       }
     }
 
-    // 5. Generic Inbound Application Confirmation
-    const genMatch1 = s.match(/(?:thank you for applying to|application received:?)\s+([^.,!]+)/i);
-    if (genMatch1) {
-      return { roleTitle: 'Software Engineer', companyName: genMatch1[1].trim(), isApplication: true };
-    }
-    const genMatch2 = s.match(/(?:application for)\s*(.+?)\s+at\s+([^.,!]+)/i);
-    if (genMatch2) {
-      return { roleTitle: genMatch2[1].trim(), companyName: genMatch2[2].trim(), isApplication: true };
+    // 5. Generic / ATS Inbound Application Confirmations (Greenhouse, Lever, Workday, Direct HR, etc.)
+    const isConfirmation = /(?:thank\s+you\s+for\s+(?:your\s+)?applying|thank\s+you\s+for\s+your\s+application|thanks\s+for\s+applying|application\s+received|application\s+submitted|application\s+confirmation|received\s+your\s+application|we\s+have\s+received\s+your\s+application|your\s+application\s+has\s+been\s+received|your\s+application\s+will\s+be\s+kept\s+confidential|applied\s+to|applied\s+for)/i.test(`${s} ${snip}`);
+
+    if (isConfirmation) {
+      let company = '';
+      let role = '';
+
+      // Pattern A: Subject mentions company: "Thank you for applying to Tower Research", "Application for Software Engineer at Google"
+      const subComp1 = s.match(/(?:thank you for applying to|applied to|application to|interest in)\s+([A-Za-z0-9\s&._-]+?)(?:\.|\s*!|$)/i);
+      if (subComp1 && subComp1[1].trim()) {
+        company = subComp1[1].trim();
+      }
+
+      const subRoleComp = s.match(/(?:application for)\s*(.+?)\s+at\s+([^.,!]+)/i);
+      if (subRoleComp && subRoleComp[2].trim()) {
+        role = subRoleComp[1].trim();
+        company = subRoleComp[2].trim();
+      }
+
+      // Pattern B: Snippet mentions company or HR:
+      // "Someone from Tower HR will be in touch"
+      if (!company) {
+        const hrMatch = snip.match(/(?:someone from|contact from|team from|recruiter from)\s+([A-Z0-9][A-Za-z0-9\s&._-]+?)\s+(?:HR|Team|Recruiting|Talent)\b/i);
+        if (hrMatch && hrMatch[1].trim()) {
+          company = hrMatch[1].trim();
+        }
+      }
+
+      // "Tower HR will be in touch", "Tower Recruiting Team will be in touch"
+      if (!company) {
+        const teamMatch = snip.match(/([A-Z0-9][A-Za-z0-9\s&._-]+?)\s+(?:HR|Recruiting Team|Hiring Team|Talent Acquisition)\s+will be in touch/i);
+        if (teamMatch && teamMatch[1].trim()) {
+          company = teamMatch[1].trim();
+        }
+      }
+
+      // "interest in Tower Research", "team at Tower Research"
+      if (!company) {
+        const interestMatch = snip.match(/(?:interest in|team at|careers at|application to)\s+([A-Z0-9][A-Za-z0-9\s&._-]+?)(?:\.|\s*!|\s*regarding|\s*for|\s+has been received|\s+will be kept)/i);
+        if (interestMatch && interestMatch[1].trim()) {
+          company = interestMatch[1].trim();
+        }
+      }
+
+      // Pattern C: From Header display name
+      // e.g. "Tower HR" <no-reply@...>, "Tower Research Capital Careers" <careers@...>
+      if (!company) {
+        const displayNameMatch = from.match(/^"?([^"<]+)"?\s*</);
+        if (displayNameMatch && displayNameMatch[1]) {
+          let name = displayNameMatch[1].trim();
+          name = name.replace(/\bvia\s+(?:Greenhouse|Lever|Ashby|Workday|SmartRecruiters)\b/gi, '').trim();
+          name = name.replace(/\b(HR|Careers|Talent Acquisition|Talent|Recruiting|Recruitment|Hiring Team|Team|Jobs|Notifications|No-Reply)\b/gi, '').trim();
+          const clean = name.replace(/^["'\s]+|["'\s]+$/g, '');
+          if (clean && clean.length >= 2 && !['Company', 'Support', 'Info', 'Admin', 'Careers', 'Recruiting'].includes(clean)) {
+            company = clean;
+          }
+        }
+      }
+
+      // Pattern D: From Header Domain (e.g. no-reply@tower-research.com -> Tower Research)
+      if (!company) {
+        const emailMatch = from.match(/<([^>]+)>/) || [null, from];
+        const email = emailMatch[1] ? emailMatch[1].trim() : from.trim();
+        const domain = email.split('@')[1]?.toLowerCase();
+        const nonCompanyDomains = [
+          'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
+          'greenhouse.io', 'lever.co', 'workday.com', 'myworkday.com',
+          'smartrecruiters.com', 'ashbyhq.com', 'jobvite.com', 'bamboohr.com'
+        ];
+        if (domain && !nonCompanyDomains.includes(domain)) {
+          const brand = domain.split('.')[0];
+          company = brand.split(/[-_]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        }
+      }
+
+      // Extract Role if available
+      if (!role) {
+        const roleMatch1 = s.match(/(?:role of|position of|role:|position:)\s+([A-Za-z0-9\s/_-]+?)(?:\.|\s*at|$)/i);
+        if (roleMatch1 && roleMatch1[1].trim()) {
+          role = roleMatch1[1].trim();
+        }
+      }
+      if (!role) {
+        const roleMatch2 = snip.match(/(?:for the|for our)\s+([A-Za-z0-9\s/_-]+?)\s+(?:position|role)\b/i);
+        if (roleMatch2 && roleMatch2[1].trim()) {
+          role = roleMatch2[1].trim();
+        }
+      }
+
+      if (company) {
+        return {
+          companyName: company,
+          roleTitle: role || 'Software Engineer',
+          isApplication: true
+        };
+      }
     }
 
     return { companyName: '', roleTitle: '', isApplication: false };
@@ -734,10 +822,10 @@ export class GmailService {
       console.log(`[GmailSync] Authenticating Gmail client for user ${user.email} (${userId})...`);
       const gmail = await this.getAuthenticatedGmailClient(userId);
 
-      // Fetch the latest 35 messages directly from user's mailbox (INBOX & SENT)
+      // Fetch the latest 60 messages directly from user's mailbox (INBOX & SENT)
       const listRes = await gmail.users.messages.list({
         userId: 'me',
-        maxResults: 35
+        maxResults: 60
       });
 
       const messages = listRes.data.messages || [];
@@ -835,10 +923,28 @@ export class GmailService {
             ? (meta.from.toLowerCase().includes('indeed') || meta.from.toLowerCase().includes('naukri') ? 'Indeed / Naukri' : meta.from.toLowerCase().includes('linkedin') ? 'LinkedIn' : 'Careers Page')
             : 'Cold Mail';
 
+          let appDomain = meta.companyDomain || null;
+          if (!appDomain) {
+            const emailMatch = meta.from.match(/<([^>]+)>/) || [null, meta.from];
+            const email = emailMatch[1] ? emailMatch[1].trim() : meta.from.trim();
+            const fromDomain = email.split('@')[1]?.toLowerCase();
+            const nonCompanyDomains = [
+              'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
+              'greenhouse.io', 'lever.co', 'workday.com', 'myworkday.com',
+              'smartrecruiters.com', 'ashbyhq.com', 'jobvite.com'
+            ];
+            if (fromDomain && !nonCompanyDomains.includes(fromDomain)) {
+              appDomain = fromDomain;
+            } else if (company) {
+              const slug = company.toLowerCase().replace(/[^a-z0-9]/g, '');
+              if (slug) appDomain = `${slug}.com`;
+            }
+          }
+
           const createData: any = {
             userId,
             companyName: company,
-            companyDomain: meta.companyDomain || null,
+            companyDomain: appDomain,
             roleTitle: role,
             notes: `Source: ${detectedSource}`,
             status: 'APPLIED',
