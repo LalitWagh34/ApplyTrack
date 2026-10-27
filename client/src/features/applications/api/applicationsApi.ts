@@ -76,6 +76,9 @@ export const applicationsApi = {
       body: JSON.stringify(data)
     });
     const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || json.error || `Server error (${res.status}): Failed to create application`);
+    }
     return json.data;
   },
 
@@ -123,6 +126,9 @@ export const applicationsApi = {
       body: JSON.stringify({})
     });
     const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || json.error || `Server error (${res.status}): Failed to sync Gmail`);
+    }
     return json.data || { syncedCount: 0, message: json.message || 'Sync complete' };
   }
 };

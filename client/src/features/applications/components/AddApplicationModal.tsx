@@ -195,8 +195,8 @@ export const AddApplicationModal: React.FC<AddApplicationModalProps> = ({
 
       onSuccess();
       onClose();
-    } catch {
-      setError('Failed to create application. Check network or server.');
+    } catch (err: any) {
+      setError(err?.message || 'Failed to create application. Check network or server.');
     } finally {
       setIsSubmitting(false);
     }

@@ -88,29 +88,34 @@ export class ApplicationsService {
     // Initial follow-up set for 7 days from now
     const initialFollowUp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    const application = await prisma.application.create({
-      data: {
-        userId,
-        companyName: data.companyName,
-        companyDomain: data.companyDomain || null,
-        roleTitle: data.roleTitle,
-        location: data.location || null,
-        salaryRange: data.salaryRange || null,
-        jobUrl: data.jobUrl || null,
-        notes: data.notes || (data.source ? `Source: ${data.source}` : null),
-        priority: (data.priority as PriorityLevel) || PriorityLevel.MEDIUM,
-        status: (data.status as ApplicationStatus) || ApplicationStatus.APPLIED,
-        appliedDate: new Date(),
-        stageDueDate: data.stageDueDate ? new Date(data.stageDueDate) : null,
-        nextFollowUpDate: initialFollowUp,
-        timeline: {
-          create: {
-            eventType: 'STATUS_CHANGED',
-            description: `Applied to ${data.companyName} for ${data.roleTitle}`,
-            metadata: { stage: data.status || ApplicationStatus.APPLIED }
-          }
+    const createData: any = {
+      userId,
+      companyName: data.companyName,
+      companyDomain: data.companyDomain || null,
+      roleTitle: data.roleTitle,
+      location: data.location || null,
+      salaryRange: data.salaryRange || null,
+      jobUrl: data.jobUrl || null,
+      notes: data.notes || (data.source ? `Source: ${data.source}` : null),
+      priority: (data.priority as PriorityLevel) || PriorityLevel.MEDIUM,
+      status: (data.status as ApplicationStatus) || ApplicationStatus.APPLIED,
+      appliedDate: new Date(),
+      nextFollowUpDate: initialFollowUp,
+      timeline: {
+        create: {
+          eventType: 'STATUS_CHANGED',
+          description: `Applied to ${data.companyName} for ${data.roleTitle}`,
+          metadata: { stage: data.status || ApplicationStatus.APPLIED }
         }
-      },
+      }
+    };
+
+    if (data.stageDueDate) {
+      createData.stageDueDate = new Date(data.stageDueDate);
+    }
+
+    const application = await prisma.application.create({
+      data: createData,
       include: {
         timeline: true
       }

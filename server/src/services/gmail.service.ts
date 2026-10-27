@@ -835,32 +835,37 @@ export class GmailService {
             ? (meta.from.toLowerCase().includes('indeed') || meta.from.toLowerCase().includes('naukri') ? 'Indeed / Naukri' : meta.from.toLowerCase().includes('linkedin') ? 'LinkedIn' : 'Careers Page')
             : 'Cold Mail';
 
-          await prisma.application.create({
-            data: {
-              userId,
-              companyName: company,
-              companyDomain: meta.companyDomain || null,
-              roleTitle: role,
-              notes: `Source: ${detectedSource}`,
-              status: 'APPLIED',
-              priority: 'MEDIUM',
-              appliedDate: meta.date,
-              stageDueDate: extractedDueDate,
-              gmailThreadId: meta.threadId,
-              lastOutboundDate: meta.date,
-              nextFollowUpDate: initialFollowUp,
-              timeline: {
-                create: {
-                  eventType: 'EMAIL_SENT',
-                  description: `Auto-detected application to ${company} via Gmail Sync (${meta.subject})`,
-                  metadata: {
-                    threadId: meta.threadId,
-                    from: meta.from,
-                    subject: meta.subject
-                  }
+          const createData: any = {
+            userId,
+            companyName: company,
+            companyDomain: meta.companyDomain || null,
+            roleTitle: role,
+            notes: `Source: ${detectedSource}`,
+            status: 'APPLIED',
+            priority: 'MEDIUM',
+            appliedDate: meta.date,
+            gmailThreadId: meta.threadId,
+            lastOutboundDate: meta.date,
+            nextFollowUpDate: initialFollowUp,
+            timeline: {
+              create: {
+                eventType: 'EMAIL_SENT',
+                description: `Auto-detected application to ${company} via Gmail Sync (${meta.subject})`,
+                metadata: {
+                  threadId: meta.threadId,
+                  from: meta.from,
+                  subject: meta.subject
                 }
               }
             }
+          };
+
+          if (extractedDueDate) {
+            createData.stageDueDate = extractedDueDate;
+          }
+
+          await prisma.application.create({
+            data: createData
           });
 
           console.log(`[GmailSync] ✅ Successfully created application for ${company} (${role})!`);
