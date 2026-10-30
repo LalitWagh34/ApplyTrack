@@ -133,7 +133,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         {displayedColumns.map((col) => {
           const colApps = applications
             .filter((app) => app.status === col.id)
-            .sort((a, b) => new Date(b.appliedDate).getTime() - new Date(a.appliedDate).getTime());
+            .sort((a, b) => {
+              const timeA = a.appliedDate ? new Date(a.appliedDate).getTime() : 0;
+              const timeB = b.appliedDate ? new Date(b.appliedDate).getTime() : 0;
+              return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+            });
           return (
             <KanbanColumn
               key={col.id}

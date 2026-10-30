@@ -473,8 +473,8 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
                     placeholder="Add skill (e.g. React) and press Enter"
                     style={{
                       flex: 1,
-                      padding: '6px 8px',
-                      borderRadius: '8px',
+                      padding: '4px 8px',
+                      borderRadius: '10px',
                       border: '1px solid var(--border-color)',
                       backgroundColor: 'var(--bg-subtle)',
                       color: 'var(--text-primary)',
