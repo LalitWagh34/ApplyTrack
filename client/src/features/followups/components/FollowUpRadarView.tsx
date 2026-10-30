@@ -169,7 +169,10 @@ export const FollowUpRadarView: React.FC<FollowUpRadarViewProps> = ({
                 </button>
 
                 <button
-                  onClick={() => onOpenDraft(item.applicationId, item.companyName, item.roleTitle)}
+                  onClick={() => {
+                    const targetId = item.applicationId || (item as any).id;
+                    onOpenDraft(targetId, item.companyName, item.roleTitle);
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',

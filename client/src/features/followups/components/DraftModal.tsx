@@ -19,34 +19,37 @@ interface DraftModalProps {
 /**
  * Universal cross-browser copy helper (works on localhost, HTTP, HTTPS, Safari, mobile)
  */
-function universalCopy(text: string): boolean {
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(text).catch(() => {
-      fallbackExecCopy(text);
-    });
-    return true;
-  }
-  return fallbackExecCopy(text);
-}
-
 function fallbackExecCopy(text: string): boolean {
-  const textarea = document.createElement('textarea');
-  textarea.value = text;
-  textarea.style.position = 'fixed';
-  textarea.style.left = '-9999px';
-  textarea.style.top = '-9999px';
-  textarea.style.opacity = '0';
-  document.body.appendChild(textarea);
-  textarea.focus();
-  textarea.select();
   try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    textarea.style.top = '0';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    textarea.setSelectionRange(0, text.length);
     const success = document.execCommand('copy');
     document.body.removeChild(textarea);
     return success;
   } catch {
-    document.body.removeChild(textarea);
     return false;
   }
+}
+
+async function universalCopy(text: string): Promise<boolean> {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      return fallbackExecCopy(text);
+    }
+  }
+  return fallbackExecCopy(text);
 }
 
 export const DraftModal: React.FC<DraftModalProps> = ({
@@ -64,42 +67,78 @@ export const DraftModal: React.FC<DraftModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isOpen || !applicationId) return;
+  // High-quality contextual fallback template by tone
+  const getFallbackDraft = (selectedTone: 'polite_nudge' | 'value_add' | 'polite_breakup'): FollowUpDraft => {
+    const company = companyName || 'your team';
+    const role = roleTitle || 'the position';
 
-    const fetchDraft = async () => {
-      setIsLoading(true);
-      try {
-        const res = await followupsApi.generateDraft(applicationId, tone);
-        setDraft(res);
-      } catch {
-        // Fallback default draft
-        setDraft({
-          subject: `Following up: ${roleTitle} at ${companyName}`,
-          body: `Hi Team,\n\nI wanted to gently follow up on my recent application for the ${roleTitle} role at ${companyName}.\n\nLooking forward to hearing from you!\n\nBest regards,`,
-          threadId: ''
-        });
-      } finally {
-        setIsLoading(false);
-      }
+    if (selectedTone === 'value_add') {
+      return {
+        subject: `Quick update regarding ${role} application at ${company}`,
+        body: `Hi Team,\n\nI wanted to quickly follow up on my application for the ${role} position at ${company}.\n\nSince applying, I’ve recently shipped a new feature/project that aligns closely with what your engineering team is building, and I’d love the opportunity to share how my experience can contribute.\n\nPlease let me know if you need any additional details or references from my side.\n\nBest regards,`,
+        threadId: '',
+        isAiGenerated: false
+      };
+    }
+
+    if (selectedTone === 'polite_breakup') {
+      return {
+        subject: `Checking in one last time: ${role} at ${company}`,
+        body: `Hi Team,\n\nI know schedules get incredibly busy, so I wanted to check in one final time regarding the ${role} opening at ${company}.\n\nIf the position has already been filled or you've decided to move in another direction, no worries at all! I appreciate your time and hope to stay connected for future opportunities.\n\nThank you,`,
+        threadId: '',
+        isAiGenerated: false
+      };
+    }
+
+    // Default: polite_nudge
+    return {
+      subject: `Following up: Application for ${role} at ${company}`,
+      body: `Hi Team,\n\nHope you're having a productive week!\n\nI wanted to gently follow up on my recent application for the ${role} role at ${company}. I'm genuinely excited about your mission and would love to know if there are any updates regarding the next steps in the review process.\n\nLooking forward to hearing from you.\n\nWarm regards,`,
+      threadId: '',
+      isAiGenerated: false
     };
+  };
 
-    void fetchDraft();
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Immediately set smart template so modal is never empty
+    const fallback = getFallbackDraft(tone);
+    setDraft(fallback);
+
+    // If we have an applicationId, try fetching Groq AI personalized version
+    if (applicationId) {
+      const fetchDraft = async () => {
+        setIsLoading(true);
+        try {
+          const res = await followupsApi.generateDraft(applicationId, tone);
+          if (res && res.body && res.subject) {
+            setDraft(res);
+          }
+        } catch {
+          // Keep fallback draft already set
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      void fetchDraft();
+    }
   }, [isOpen, applicationId, tone, companyName, roleTitle]);
 
   if (!isOpen) return null;
 
-  const handleCopyFull = () => {
+  const handleCopyFull = async () => {
     if (!draft) return;
     const fullText = `Subject: ${draft.subject}\n\n${draft.body}`;
-    universalCopy(fullText);
+    await universalCopy(fullText);
     setCopiedType('all');
     setTimeout(() => setCopiedType(null), 2500);
   };
 
-  const handleCopyBodyOnly = () => {
+  const handleCopyBodyOnly = async () => {
     if (!draft) return;
-    universalCopy(draft.body);
+    await universalCopy(draft.body);
     setCopiedType('body');
     setTimeout(() => setCopiedType(null), 2500);
   };

@@ -74,7 +74,10 @@ export const FollowUpBanner: React.FC<FollowUpBannerProps> = ({
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {/* Action Button */}
         <button
-          onClick={() => onOpenDraft(topItem.applicationId, topItem.companyName, topItem.roleTitle)}
+          onClick={() => {
+            const targetAppId = topItem.applicationId || (topItem as any).id;
+            onOpenDraft(targetAppId, topItem.companyName, topItem.roleTitle);
+          }}
           style={{
             display: 'inline-flex',
             alignItems: 'center',

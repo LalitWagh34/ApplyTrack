@@ -3,6 +3,7 @@
  */
 
 export interface PendingFollowUp {
+  id?: string;
   applicationId: string;
   companyName: string;
   roleTitle: string;

@@ -32,7 +32,13 @@ export const followupsApi = {
       headers: getAuthHeaders(),
       body: JSON.stringify({ tone })
     });
+    if (!res.ok) {
+      throw new Error(`Failed to generate draft: ${res.statusText}`);
+    }
     const json = await res.json();
+    if (!json?.data) {
+      throw new Error('No draft data returned');
+    }
     return json.data;
   },
 

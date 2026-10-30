@@ -33,6 +33,8 @@ export class FollowUpsService {
 
     return pending.map((item) => ({
       ...item,
+      id: item.id,
+      applicationId: item.id,
       companyName: cryptoService.safeDecrypt(item.companyName) || item.companyName,
       roleTitle: cryptoService.safeDecrypt(item.roleTitle) || item.roleTitle
     }));

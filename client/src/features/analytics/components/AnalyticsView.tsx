@@ -492,7 +492,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
                   </div>
 
                   <button
-                    onClick={() => onOpenDraft(item.applicationId, item.companyName, item.roleTitle)}
+                    onClick={() => {
+                      const targetId = item.applicationId || (item as any).id;
+                      onOpenDraft(targetId, item.companyName, item.roleTitle);
+                    }}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
