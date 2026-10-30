@@ -1,22 +1,33 @@
 /**
  * Follow-Up Radar Dedicated View
- * Displays all overdue applications needing follow-up with snooze and draft triggers
+ * Displays all overdue applications needing follow-up with snooze, company logos, and draft triggers
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { PendingFollowUp } from '../types/followup.types.js';
-import { Clock, Send, BellOff, CheckCircle } from 'lucide-react';
+import { Clock, Send, BellOff, CheckCircle, ArrowRight } from 'lucide-react';
+import { CompanyLogo } from '../../../components/ui/CompanyLogo.js';
 
 interface FollowUpRadarViewProps {
   pendingFollowUps: PendingFollowUp[];
   onOpenDraft: (applicationId: string, companyName: string, roleTitle: string) => void;
   onDismiss: (applicationId: string) => void;
+  onNavigateToBoard?: () => void;
 }
 
 export const FollowUpRadarView: React.FC<FollowUpRadarViewProps> = ({
   pendingFollowUps,
   onOpenDraft,
-  onDismiss
+  onDismiss,
+  onNavigateToBoard
 }) => {
+  const [snoozeToast, setSnoozeToast] = useState<string | null>(null);
+
+  const handleSnooze = (item: PendingFollowUp) => {
+    onDismiss(item.applicationId);
+    setSnoozeToast(`Snoozed follow-up for ${item.companyName} by 7 days`);
+    setTimeout(() => setSnoozeToast(null), 3000);
+  };
+
   return (
     <div style={{ maxWidth: '860px', margin: '0 auto', padding: '20px 16px' }}>
       <div style={{ marginBottom: '20px' }}>
@@ -28,23 +39,66 @@ export const FollowUpRadarView: React.FC<FollowUpRadarViewProps> = ({
         </p>
       </div>
 
+      {snoozeToast && (
+        <div
+          style={{
+            marginBottom: '16px',
+            padding: '10px 16px',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(59, 130, 246, 0.12)',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            color: 'var(--accent)',
+            fontSize: '0.82rem',
+            fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <BellOff size={15} />
+          <span>{snoozeToast}</span>
+        </div>
+      )}
+
       {pendingFollowUps.length === 0 ? (
         <div
           style={{
-            padding: '48px 20px',
+            padding: '48px 24px',
             textAlign: 'center',
             backgroundColor: 'var(--bg-surface)',
             border: '1px solid var(--border-color)',
-            borderRadius: '12px'
+            borderRadius: '14px',
+            boxShadow: 'var(--shadow-sm)'
           }}
         >
-          <CheckCircle size={36} style={{ color: 'var(--stage-offer)', margin: '0 auto 12px' }} />
-          <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-            All caught up!
+          <CheckCircle size={40} style={{ color: 'var(--stage-offer)', margin: '0 auto 12px' }} />
+          <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+            All caught up! 🎉
           </h3>
-          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            No dormant applications require attention right now.
+          <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginTop: '6px', maxWidth: '420px', margin: '6px auto 16px' }}>
+            No dormant applications require attention right now. All your job applications remain safely tracked on your Kanban Board.
           </p>
+          {onNavigateToBoard && (
+            <button
+              onClick={onNavigateToBoard}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 18px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--accent)',
+                color: '#ffffff',
+                border: 'none',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              <span>Back to Kanban Board</span>
+              <ArrowRight size={14} />
+            </button>
+          )}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -54,8 +108,8 @@ export const FollowUpRadarView: React.FC<FollowUpRadarViewProps> = ({
               style={{
                 backgroundColor: 'var(--bg-surface)',
                 border: '1px solid var(--border-color)',
-                borderRadius: '10px',
-                padding: '16px',
+                borderRadius: '12px',
+                padding: '16px 18px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -64,44 +118,51 @@ export const FollowUpRadarView: React.FC<FollowUpRadarViewProps> = ({
                 boxShadow: 'var(--shadow-sm)'
               }}
             >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <h4 style={{ fontSize: '0.96rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {item.companyName}
-                  </h4>
-                  <span
-                    className="badge"
-                    style={{
-                      backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                      color: 'var(--stage-oa)',
-                      border: '1px solid var(--stage-oa)'
-                    }}
-                  >
-                    <Clock size={11} />
-                    7+ Days Dormant
-                  </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <CompanyLogo companyName={item.companyName} size={36} />
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h4 style={{ fontSize: '0.96rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {item.companyName}
+                    </h4>
+                    <span
+                      className="badge"
+                      style={{
+                        backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                        color: 'var(--stage-oa)',
+                        border: '1px solid var(--stage-oa)'
+                      }}
+                    >
+                      <Clock size={11} />
+                      7+ Days Dormant
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                    {item.roleTitle}
+                  </p>
                 </div>
-                <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                  {item.roleTitle}
-                </p>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <button
-                  onClick={() => onDismiss(item.applicationId)}
+                  onClick={() => handleSnooze(item)}
+                  title="Snooze reminder for 7 days"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    padding: '6px 12px',
-                    borderRadius: '6px',
+                    padding: '7px 14px',
+                    borderRadius: '8px',
                     border: '1px solid var(--border-color)',
                     backgroundColor: 'var(--bg-subtle)',
                     color: 'var(--text-secondary)',
                     fontSize: '0.78rem',
                     fontWeight: 500,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'all 0.12s ease'
                   }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--border-color)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-subtle)')}
                 >
                   <BellOff size={13} />
                   <span>Snooze 7d</span>
@@ -113,8 +174,8 @@ export const FollowUpRadarView: React.FC<FollowUpRadarViewProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    padding: '6px 14px',
-                    borderRadius: '6px',
+                    padding: '7px 16px',
+                    borderRadius: '8px',
                     border: 'none',
                     backgroundColor: 'var(--accent)',
                     color: '#ffffff',

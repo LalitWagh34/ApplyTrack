@@ -415,6 +415,7 @@ export function AppContent() {
               pendingFollowUps={pendingFollowUps}
               onOpenDraft={handleOpenDraft}
               onDismiss={handleDismissFollowUp}
+              onNavigateToBoard={() => setActiveView('board')}
             />
           )}
         </main>

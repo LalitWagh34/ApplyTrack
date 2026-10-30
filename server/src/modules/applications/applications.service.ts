@@ -58,7 +58,7 @@ export class ApplicationsService {
     const [rawApplications, totalCount] = await Promise.all([
       prisma.application.findMany({
         where: whereClause,
-        orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
+        orderBy: [{ appliedDate: 'desc' }, { updatedAt: 'desc' }],
         include: {
           timeline: {
             take: 3,
