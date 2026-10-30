@@ -473,8 +473,8 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
                     placeholder="Add skill (e.g. React) and press Enter"
                     style={{
                       flex: 1,
-                      padding: '6px 10px',
-                      borderRadius: '6px',
+                      padding: '6px 8px',
+                      borderRadius: '8px',
                       border: '1px solid var(--border-color)',
                       backgroundColor: 'var(--bg-subtle)',
                       color: 'var(--text-primary)',
@@ -486,8 +486,8 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
                     type="button"
                     onClick={handleAddSkill}
                     style={{
-                      padding: '6px 10px',
-                      borderRadius: '6px',
+                      padding: '6px 8px',
+                      borderRadius: '8px',
                       border: '1px solid var(--border-color)',
                       backgroundColor: 'var(--bg-surface)',
                       color: 'var(--text-primary)',
@@ -536,7 +536,7 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
                 rows={2}
                 value={topProjects}
                 onChange={(e) => setTopProjects(e.target.value)}
-                placeholder="e.g. ApplyTrack - Minimalist job tracker with Gmail sync & BullMQ"
+                placeholder="e.g. Your Project"
                 style={{
                   width: '100%',
                   padding: '8px 12px',
