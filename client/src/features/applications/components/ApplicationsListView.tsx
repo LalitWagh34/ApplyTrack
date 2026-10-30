@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { Application } from '../types/application.types.js';
 import { Clock, CheckCircle2, ChevronRight, AlertCircle, Building2, Trash2, CheckSquare } from 'lucide-react';
+import { CompanyLogo } from '../../../components/ui/CompanyLogo.js';
 
 interface ApplicationsListViewProps {
   applications: Application[];
@@ -314,32 +315,41 @@ export const ApplicationsListView: React.FC<ApplicationsListViewProps> = ({
 
                   {/* Company & Role */}
                   <td style={{ padding: '12px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.86rem' }}>
-                        {app.companyName}
-                      </span>
-                      {app.companyDomain && (
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                          @{app.companyDomain}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '2px' }}>
-                      <span>{app.roleTitle}</span>
-                      {app.notes && app.notes.startsWith('Source: ') && (
-                        <span
-                          style={{
-                            fontSize: '0.68rem',
-                            padding: '1px 6px',
-                            borderRadius: '4px',
-                            backgroundColor: 'var(--bg-subtle)',
-                            border: '1px solid var(--border-color)',
-                            color: 'var(--text-muted)'
-                          }}
-                        >
-                          {app.notes.replace('Source: ', '')}
-                        </span>
-                      )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <CompanyLogo
+                        companyName={app.companyName}
+                        domain={app.companyDomain}
+                        size={28}
+                      />
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.86rem' }}>
+                            {app.companyName}
+                          </span>
+                          {app.companyDomain && (
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                              @{app.companyDomain}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '2px' }}>
+                          <span>{app.roleTitle}</span>
+                          {app.notes && app.notes.startsWith('Source: ') && (
+                            <span
+                              style={{
+                                fontSize: '0.68rem',
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                                backgroundColor: 'var(--bg-subtle)',
+                                border: '1px solid var(--border-color)',
+                                color: 'var(--text-muted)'
+                              }}
+                            >
+                              {app.notes.replace('Source: ', '')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </td>
 

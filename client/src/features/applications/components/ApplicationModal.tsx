@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { Application, ApplicationStatus, PriorityLevel } from '../types/application.types.js';
 import { applicationsApi } from '../api/applicationsApi.js';
 import { X, Trash2, Save, Calendar, CheckCircle2 } from 'lucide-react';
+import { CompanyLogo } from '../../../components/ui/CompanyLogo.js';
 
 interface ApplicationModalProps {
   application: Application | null;
@@ -102,36 +103,43 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
             justifyContent: 'space-between'
           }}
         >
-          <div>
-            <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              {application.companyName}
-            </h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                {application.roleTitle}
-              </p>
-              {application.companyDomain && (
-                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                  • {application.companyDomain}
-                </span>
-              )}
-              {application.jobUrl && (
-                <a
-                  href={application.jobUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    fontSize: '0.74rem',
-                    color: 'var(--accent)',
-                    textDecoration: 'none',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '3px'
-                  }}
-                >
-                  ↗ Link
-                </a>
-              )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <CompanyLogo
+              companyName={application.companyName}
+              domain={application.companyDomain}
+              size={40}
+            />
+            <div>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                {application.companyName}
+              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  {application.roleTitle}
+                </p>
+                {application.companyDomain && (
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                    • {application.companyDomain}
+                  </span>
+                )}
+                {application.jobUrl && (
+                  <a
+                    href={application.jobUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      fontSize: '0.74rem',
+                      color: 'var(--accent)',
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px'
+                    }}
+                  >
+                    ↗ Link
+                  </a>
+                )}
+              </div>
             </div>
           </div>
 

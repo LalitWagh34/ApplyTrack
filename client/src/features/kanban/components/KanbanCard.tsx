@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { Application } from '../../applications/types/application.types.js';
 import { MapPin, DollarSign, Clock, Calendar, AlertCircle, Trash2 } from 'lucide-react';
 import { CalendarPickerModal } from './CalendarPickerModal.js';
+import { CompanyLogo } from '../../../components/ui/CompanyLogo.js';
 
 interface KanbanCardProps {
   application: Application;
@@ -69,16 +70,26 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
     >
       {/* Top Header: Company Name & Overdue Badge */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-        <h4
-          style={{
-            fontSize: '0.92rem',
-            fontWeight: 600,
-            color: 'var(--text-primary)',
-            letterSpacing: '-0.01em'
-          }}
-        >
-          {application.companyName}
-        </h4>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+          <CompanyLogo
+            companyName={application.companyName}
+            domain={application.companyDomain}
+            size={22}
+          />
+          <h4
+            style={{
+              fontSize: '0.92rem',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              letterSpacing: '-0.01em',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+          >
+            {application.companyName}
+          </h4>
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {isOverdue && (

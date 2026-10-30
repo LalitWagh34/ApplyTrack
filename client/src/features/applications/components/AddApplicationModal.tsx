@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { applicationsApi } from '../api/applicationsApi.js';
 import { PriorityLevel } from '../types/application.types.js';
 import { X, Plus, Sparkles, Globe, Link2, Building2, Briefcase, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
+import { CompanyLogo } from '../../../components/ui/CompanyLogo.js';
 
 export interface AddApplicationModalInitialData {
   companyName?: string;
@@ -305,24 +306,31 @@ export const AddApplicationModal: React.FC<AddApplicationModalProps> = ({
                   <Building2 size={13} />
                   Company Name *
                 </label>
-                <input
-                  type="text"
-                  required
-                  autoFocus
-                  value={companyName}
-                  onChange={handleCompanyNameChange}
-                  placeholder="e.g. Swiggy, Google"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-subtle)',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.84rem',
-                    outline: 'none'
-                  }}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <CompanyLogo
+                    companyName={companyName || 'Company'}
+                    domain={companyDomain}
+                    size={34}
+                  />
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    value={companyName}
+                    onChange={handleCompanyNameChange}
+                    placeholder="e.g. Swiggy, Google"
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-subtle)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.84rem',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
               </div>
 
               <div>
