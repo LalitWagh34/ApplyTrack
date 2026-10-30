@@ -357,7 +357,7 @@ export const CalendarPickerModal: React.FC<CalendarPickerModalProps> = ({
                   Google Calendar
                 </div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  Opens directly in Google Calendar web / app
+                  Opens directly in Google Calendar 
                 </div>
               </div>
             </div>
@@ -396,7 +396,7 @@ export const CalendarPickerModal: React.FC<CalendarPickerModalProps> = ({
                   Apple Calendar (iOS / Mac)
                 </div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  Triggers native iPhone / Mac sheet with alarms
+                  Opens in iPhone alarms
                 </div>
               </div>
             </div>
