@@ -2,9 +2,10 @@
  * Kanban Card Component
  * Linear-inspired minimal card with drag handle, status badges, and overdue follow-up indicators
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { Application } from '../../applications/types/application.types.js';
 import { MapPin, DollarSign, Clock, Calendar, AlertCircle, Trash2 } from 'lucide-react';
+import { CalendarPickerModal } from './CalendarPickerModal.js';
 
 interface KanbanCardProps {
   application: Application;
@@ -19,6 +20,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
   onDragStart,
   onArchive
 }) => {
+  const [isCalendarPickerOpen, setIsCalendarPickerOpen] = useState(false);
   const isOverdue =
     application.nextFollowUpDate &&
     new Date(application.nextFollowUpDate) <= new Date() &&
@@ -137,20 +139,34 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
       {/* Meta Pills (Domain, Due Date, Source, Location, Salary) */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
         {application.stageDueDate && (
-          <span
-            className="badge"
-            title={`Scheduled / Due Date: ${new Date(application.stageDueDate).toLocaleDateString()}`}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsCalendarPickerOpen(true);
+            }}
+            title="Click to add deadline to Google Calendar or Apple Calendar (.ics)"
             style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
               backgroundColor: 'var(--bg-subtle)',
               color: 'var(--text-secondary)',
               border: '1px solid var(--border-color)',
+              borderRadius: '4px',
+              padding: '2px 6px',
               fontSize: '0.68rem',
-              fontWeight: 500
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'background-color 0.12s ease'
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--border-color)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-subtle)')}
           >
             <Calendar size={10} />
-            {formatDueDate(application.stageDueDate, application.status)}
-          </span>
+            <span>{formatDueDate(application.stageDueDate, application.status)}</span>
+            <span style={{ fontSize: '0.62rem', opacity: 0.65, marginLeft: '2px' }}>📅+</span>
+          </button>
         )}
 
         {application.companyDomain && (
@@ -237,6 +253,21 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
           <span>{application.followUpCount} sent</span>
         ) : null}
       </div>
+
+      {/* Calendar Picker Modal */}
+      {application.stageDueDate && (
+        <CalendarPickerModal
+          isOpen={isCalendarPickerOpen}
+          onClose={() => setIsCalendarPickerOpen(false)}
+          companyName={application.companyName}
+          event={{
+            title: `[${application.status === 'INTERVIEW' ? 'Interview' : 'OA Due'}] ${application.roleTitle} at ${application.companyName}`,
+            description: `Application details:\nCompany: ${application.companyName}\nRole: ${application.roleTitle}\nStatus: ${application.status}\n${application.jobUrl ? `Job Link: ${application.jobUrl}\n` : ''}${application.notes ? `Notes: ${application.notes}` : ''}`,
+            startDate: new Date(application.stageDueDate),
+            durationMinutes: application.status === 'INTERVIEW' ? 60 : 120
+          }}
+        />
+      )}
     </div>
   );
 };

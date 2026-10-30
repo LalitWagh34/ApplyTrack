@@ -13,7 +13,7 @@ export function initFollowUpCronWorker(): Worker {
     async () => {
       const now = new Date();
 
-      // Find all pending applications across all active users where follow-up date has arrived
+      // 1. Find all pending applications across all active users where follow-up date has arrived
       const pendingFollowUps = await prisma.application.findMany({
         where: {
           isArchived: false,
@@ -35,9 +35,60 @@ export function initFollowUpCronWorker(): Worker {
 
       console.log(`[Follow-Up Radar] Found ${pendingFollowUps.length} applications needing follow-up.`);
 
+      // 2. Scan for upcoming OA and Interview deadlines (within the next 24 hours)
+      const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const upcomingDeadlines = await prisma.application.findMany({
+        where: {
+          isArchived: false,
+          stageDueDate: {
+            gt: now,
+            lte: in24Hours
+          },
+          status: {
+            in: [ApplicationStatus.OA_TEST, ApplicationStatus.INTERVIEW]
+          }
+        },
+        select: {
+          id: true,
+          userId: true,
+          companyName: true,
+          roleTitle: true,
+          status: true,
+          stageDueDate: true
+        }
+      });
+
+      console.log(`[Deadline Radar] Found ${upcomingDeadlines.length} upcoming OA/Interview deadlines.`);
+
+      // Dispatch Web Push notification for each upcoming deadline
+      const { notificationsService } = await import('../modules/notifications/notifications.service.js');
+      const { cryptoService } = await import('../services/crypto.service.js');
+
+      for (const item of upcomingDeadlines) {
+        if (!item.stageDueDate) continue;
+
+        const company = cryptoService.safeDecrypt(item.companyName) || item.companyName;
+        const role = cryptoService.safeDecrypt(item.roleTitle) || item.roleTitle;
+        const hoursLeft = Math.max(1, Math.round((item.stageDueDate.getTime() - now.getTime()) / (1000 * 60 * 60)));
+
+        const isUrgent = hoursLeft <= 6;
+        const title = isUrgent
+          ? `🚨 Urgent: ${item.status === 'INTERVIEW' ? 'Interview' : 'OA'} in ${hoursLeft}h (${company})`
+          : `⏰ Reminder: ${item.status === 'INTERVIEW' ? 'Interview' : 'OA Due'} tomorrow (${company})`;
+
+        const body = `${role} at ${company} is scheduled / due in ${hoursLeft} hours. Click to view notes and preparation details.`;
+
+        await notificationsService.sendPushToUser(item.userId, {
+          title,
+          body,
+          url: '/',
+          tag: `deadline-${item.id}`
+        });
+      }
+
       return {
-        scannedCount: pendingFollowUps.length,
-        items: pendingFollowUps.map((p) => ({ id: p.id, company: p.companyName }))
+        scannedFollowUps: pendingFollowUps.length,
+        scannedDeadlines: upcomingDeadlines.length
       };
     },
     {
