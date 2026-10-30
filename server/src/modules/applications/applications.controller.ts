@@ -5,6 +5,7 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { applicationsService } from './applications.service.js';
 import { gmailService } from '../../services/gmail.service.js';
+import { redisCache } from '../../services/redis-cache.service.js';
 import {
   CreateApplicationDTO,
   UpdateApplicationDTO,
@@ -137,13 +138,28 @@ export class ApplicationsController {
 
   /**
    * On-demand sync of user's Gmail mailbox for recent applications
+   * Protected with 60-second Redis Mutex lock to prevent API quota exhaustion
    */
   public async syncGmail(request: FastifyRequest, reply: FastifyReply) {
     const userId = request.user.userId;
+    const lockKey = `lock:sync:${userId}`;
+
+    // Try acquiring 60-second lock
+    const lockAcquired = await redisCache.acquireLock(lockKey, 60);
+    if (!lockAcquired) {
+      return reply.status(429).send(
+        errorResponse('Sync is already running or on cooldown. Please wait 60 seconds before syncing again.')
+      );
+    }
+
     try {
       const result = await gmailService.syncMailbox(userId);
+      // Invalidate pipeline cache so newly fetched applications show up immediately
+      void redisCache.invalidateUserApps(userId);
       return reply.send(successResponse(result, result.message));
     } catch (err: any) {
+      // Release lock early if sync fails immediately
+      await redisCache.releaseLock(lockKey);
       request.log.error({ err }, 'Gmail on-demand sync error:');
       return reply.status(500).send(errorResponse(err.message || 'Failed to sync Gmail'));
     }

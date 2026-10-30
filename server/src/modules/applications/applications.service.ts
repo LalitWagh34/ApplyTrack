@@ -4,6 +4,7 @@
  */
 import { prisma, ApplicationStatus, PriorityLevel } from '@applytrack/database';
 import { cryptoService } from '../../services/crypto.service.js';
+import { redisCache } from '../../services/redis-cache.service.js';
 import {
   CreateApplicationDTO,
   UpdateApplicationDTO,
@@ -28,9 +29,19 @@ export class ApplicationsService {
   }
 
   /**
-   * Lists all active applications for user with optional status and text filters
+   * Lists all active applications for user with optional status and text filters (with Redis caching)
    */
   public async listApplications(userId: string, filters: ApplicationFilterQuery) {
+    const cacheKey = `cache:apps:${userId}:${filters.status || 'all'}`;
+
+    // 1. Try Redis cache first (only for non-search views to keep RAM lean)
+    if (!filters.search) {
+      const cached = await redisCache.get<{ applications: any[]; totalCount: number }>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const whereClause: {
       userId: string;
       isArchived: boolean;
@@ -72,10 +83,17 @@ export class ApplicationsService {
       );
     }
 
-    return {
+    const result = {
       applications,
       totalCount: filters.search ? applications.length : totalCount
     };
+
+    // 2. Populate Redis cache with 3-minute TTL
+    if (!filters.search) {
+      void redisCache.set(cacheKey, result, 180);
+    }
+
+    return result;
   }
 
   /**
@@ -143,6 +161,8 @@ export class ApplicationsService {
       }
     });
 
+    void redisCache.invalidateUserApps(userId);
+
     return this.decryptApplication(application);
   }
 
@@ -188,6 +208,8 @@ export class ApplicationsService {
       }
     });
 
+    void redisCache.invalidateUserApps(userId);
+
     return this.decryptApplication(updated);
   }
 
@@ -221,6 +243,8 @@ export class ApplicationsService {
       data: updateData
     });
 
+    void redisCache.invalidateUserApps(userId);
+
     return this.decryptApplication(updated);
   }
 
@@ -249,6 +273,8 @@ export class ApplicationsService {
       }
     });
 
+    void redisCache.invalidateUserApps(userId);
+
     return { archived: true, id: applicationId };
   }
 
@@ -270,6 +296,8 @@ export class ApplicationsService {
         isArchived: true
       }
     });
+
+    void redisCache.invalidateUserApps(userId);
 
     return { count: result.count };
   }
