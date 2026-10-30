@@ -63,6 +63,26 @@ export class CryptoService {
 
     return plaintext;
   }
+
+  /**
+   * Safely decrypts a payload if it is encrypted; falls back to raw string for legacy unencrypted data
+   */
+  public safeDecrypt(payload: string | null | undefined): string | null {
+    if (!payload) return payload ?? null;
+    if (typeof payload !== 'string') return payload;
+
+    // Check if string matches AES-256-GCM format: ivHex:authTagHex:ciphertextHex
+    const parts = payload.split(':');
+    if (parts.length === 3 && parts[0].length === 24 && parts[1].length === 32) {
+      try {
+        return this.decrypt(payload);
+      } catch {
+        return payload; // Fallback to raw string if decryption fails
+      }
+    }
+
+    return payload; // Return raw value for legacy records
+  }
 }
 
 export const cryptoService = new CryptoService();

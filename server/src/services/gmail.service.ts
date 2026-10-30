@@ -632,11 +632,15 @@ export class GmailService {
 
       // 3. Assessment platform or Company Name match
       for (const app of userApps) {
-        const compLower = app.companyName.toLowerCase();
+        const decryptedName = cryptoService.safeDecrypt(app.companyName) || app.companyName;
+        const compLower = decryptedName.toLowerCase();
         if (compLower.length >= 3) {
           const textToSearch = `${meta.from} ${meta.subject} ${meta.snippet}`.toLowerCase();
           if (textToSearch.includes(compLower)) {
-            return app;
+            return {
+              ...app,
+              companyName: decryptedName
+            };
           }
         }
       }
@@ -941,12 +945,14 @@ export class GmailService {
             }
           }
 
+          const notesStr = `Source: ${detectedSource}`;
+
           const createData: any = {
             userId,
-            companyName: company,
+            companyName: cryptoService.encrypt(company),
             companyDomain: appDomain,
-            roleTitle: role,
-            notes: `Source: ${detectedSource}`,
+            roleTitle: cryptoService.encrypt(role),
+            notes: cryptoService.encrypt(notesStr),
             status: 'APPLIED',
             priority: 'MEDIUM',
             appliedDate: meta.date,

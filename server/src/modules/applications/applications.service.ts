@@ -3,6 +3,7 @@
  * Business logic for job applications lifecycle, Kanban transitions, and activity timelines
  */
 import { prisma, ApplicationStatus, PriorityLevel } from '@applytrack/database';
+import { cryptoService } from '../../services/crypto.service.js';
 import {
   CreateApplicationDTO,
   UpdateApplicationDTO,
@@ -11,6 +12,22 @@ import {
 
 export class ApplicationsService {
   /**
+   * Helper to decrypt sensitive fields from an application record
+   */
+  private decryptApplication<T extends Record<string, any>>(app: T): T {
+    if (!app) return app;
+    return {
+      ...app,
+      companyName: cryptoService.safeDecrypt(app.companyName) || app.companyName,
+      roleTitle: cryptoService.safeDecrypt(app.roleTitle) || app.roleTitle,
+      notes: cryptoService.safeDecrypt(app.notes) ?? app.notes,
+      salaryRange: cryptoService.safeDecrypt(app.salaryRange) ?? app.salaryRange,
+      jobUrl: cryptoService.safeDecrypt(app.jobUrl) ?? app.jobUrl,
+      location: cryptoService.safeDecrypt(app.location) ?? app.location
+    };
+  }
+
+  /**
    * Lists all active applications for user with optional status and text filters
    */
   public async listApplications(userId: string, filters: ApplicationFilterQuery) {
@@ -18,10 +35,6 @@ export class ApplicationsService {
       userId: string;
       isArchived: boolean;
       status?: ApplicationStatus;
-      OR?: Array<{
-        companyName?: { contains: string; mode: 'insensitive' };
-        roleTitle?: { contains: string; mode: 'insensitive' };
-      }>;
     } = {
       userId,
       isArchived: false
@@ -31,14 +44,7 @@ export class ApplicationsService {
       whereClause.status = filters.status as ApplicationStatus;
     }
 
-    if (filters.search) {
-      whereClause.OR = [
-        { companyName: { contains: filters.search, mode: 'insensitive' } },
-        { roleTitle: { contains: filters.search, mode: 'insensitive' } }
-      ];
-    }
-
-    const [applications, totalCount] = await Promise.all([
+    const [rawApplications, totalCount] = await Promise.all([
       prisma.application.findMany({
         where: whereClause,
         orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
@@ -52,9 +58,23 @@ export class ApplicationsService {
       prisma.application.count({ where: whereClause })
     ]);
 
+    // Decrypt all application fields in memory
+    let applications = rawApplications.map((app) => this.decryptApplication(app));
+
+    // Handle search filter in memory over decrypted companyName and roleTitle
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      applications = applications.filter(
+        (app) =>
+          (app.companyName && app.companyName.toLowerCase().includes(q)) ||
+          (app.roleTitle && app.roleTitle.toLowerCase().includes(q)) ||
+          (app.notes && app.notes.toLowerCase().includes(q))
+      );
+    }
+
     return {
       applications,
-      totalCount
+      totalCount: filters.search ? applications.length : totalCount
     };
   }
 
@@ -78,7 +98,7 @@ export class ApplicationsService {
       }
     });
 
-    return application;
+    return application ? this.decryptApplication(application) : null;
   }
 
   /**
@@ -88,15 +108,17 @@ export class ApplicationsService {
     // Initial follow-up set for 7 days from now
     const initialFollowUp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
+    const notesValue = data.notes || (data.source ? `Source: ${data.source}` : null);
+
     const createData: any = {
       userId,
-      companyName: data.companyName,
+      companyName: cryptoService.encrypt(data.companyName),
       companyDomain: data.companyDomain || null,
-      roleTitle: data.roleTitle,
-      location: data.location || null,
-      salaryRange: data.salaryRange || null,
-      jobUrl: data.jobUrl || null,
-      notes: data.notes || (data.source ? `Source: ${data.source}` : null),
+      roleTitle: cryptoService.encrypt(data.roleTitle),
+      location: data.location ? cryptoService.encrypt(data.location) : null,
+      salaryRange: data.salaryRange ? cryptoService.encrypt(data.salaryRange) : null,
+      jobUrl: data.jobUrl ? cryptoService.encrypt(data.jobUrl) : null,
+      notes: notesValue ? cryptoService.encrypt(notesValue) : null,
       priority: (data.priority as PriorityLevel) || PriorityLevel.MEDIUM,
       status: (data.status as ApplicationStatus) || ApplicationStatus.APPLIED,
       appliedDate: new Date(),
@@ -121,7 +143,7 @@ export class ApplicationsService {
       }
     });
 
-    return application;
+    return this.decryptApplication(application);
   }
 
   /**
@@ -166,7 +188,7 @@ export class ApplicationsService {
       }
     });
 
-    return updated;
+    return this.decryptApplication(updated);
   }
 
   /**
@@ -181,23 +203,25 @@ export class ApplicationsService {
       return null;
     }
 
+    const updateData: Record<string, any> = {};
+
+    if (data.companyName) updateData.companyName = cryptoService.encrypt(data.companyName);
+    if (data.companyDomain !== undefined) updateData.companyDomain = data.companyDomain;
+    if (data.roleTitle) updateData.roleTitle = cryptoService.encrypt(data.roleTitle);
+    if (data.location !== undefined) updateData.location = data.location ? cryptoService.encrypt(data.location) : null;
+    if (data.salaryRange !== undefined) updateData.salaryRange = data.salaryRange ? cryptoService.encrypt(data.salaryRange) : null;
+    if (data.jobUrl !== undefined) updateData.jobUrl = data.jobUrl ? cryptoService.encrypt(data.jobUrl) : null;
+    if (data.status) updateData.status = data.status as ApplicationStatus;
+    if (data.priority) updateData.priority = data.priority as PriorityLevel;
+    if (data.stageDueDate !== undefined) updateData.stageDueDate = data.stageDueDate ? new Date(data.stageDueDate) : null;
+    if (data.notes !== undefined) updateData.notes = data.notes ? cryptoService.encrypt(data.notes) : null;
+
     const updated = await prisma.application.update({
       where: { id: applicationId },
-      data: {
-        ...(data.companyName && { companyName: data.companyName }),
-        ...(data.companyDomain !== undefined && { companyDomain: data.companyDomain }),
-        ...(data.roleTitle && { roleTitle: data.roleTitle }),
-        ...(data.location !== undefined && { location: data.location }),
-        ...(data.salaryRange !== undefined && { salaryRange: data.salaryRange }),
-        ...(data.jobUrl !== undefined && { jobUrl: data.jobUrl }),
-        ...(data.status && { status: data.status as ApplicationStatus }),
-        ...(data.priority && { priority: data.priority as PriorityLevel }),
-        ...(data.stageDueDate !== undefined && { stageDueDate: data.stageDueDate ? new Date(data.stageDueDate) : null }),
-        ...(data.notes !== undefined && { notes: data.notes })
-      }
+      data: updateData
     });
 
-    return updated;
+    return this.decryptApplication(updated);
   }
 
   /**

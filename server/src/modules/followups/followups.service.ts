@@ -1,8 +1,5 @@
-/**
- * Follow-Ups Service
- * 7-Day Follow-Up Radar, contextual AI draft generator, and reminder lifecycle
- */
 import { prisma, ApplicationStatus } from '@applytrack/database';
+import { cryptoService } from '../../services/crypto.service.js';
 
 export class FollowUpsService {
   /**
@@ -34,7 +31,11 @@ export class FollowUpsService {
       }
     });
 
-    return pending;
+    return pending.map((item) => ({
+      ...item,
+      companyName: cryptoService.safeDecrypt(item.companyName) || item.companyName,
+      roleTitle: cryptoService.safeDecrypt(item.roleTitle) || item.roleTitle
+    }));
   }
 
   /**
@@ -145,7 +146,11 @@ ${params.notes ? `- Recruiter/Role Notes: ${params.notes}` : ''}`;
       return null;
     }
 
-    const { companyName, roleTitle, gmailThreadId, notes, followUpCount } = application;
+    const companyName = cryptoService.safeDecrypt(application.companyName) || application.companyName;
+    const roleTitle = cryptoService.safeDecrypt(application.roleTitle) || application.roleTitle;
+    const notes = cryptoService.safeDecrypt(application.notes) ?? application.notes;
+    const { gmailThreadId, followUpCount } = application;
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { fullName: true, preferences: true }
