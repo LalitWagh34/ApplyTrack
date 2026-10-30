@@ -101,7 +101,7 @@ const AppleCalendarLogo: React.FC<{ size?: number }> = ({ size = 32 }) => (
 );
 
 /**
- * Microsoft Outlook Logo
+ * High-fidelity Microsoft Outlook Logo (Matches Official Fluent Design Icon with Envelope & O-Tile)
  */
 const OutlookLogo: React.FC<{ size?: number }> = ({ size = 32 }) => (
   <svg
@@ -112,20 +112,55 @@ const OutlookLogo: React.FC<{ size?: number }> = ({ size = 32 }) => (
     xmlns="http://www.w3.org/2000/svg"
     style={{ flexShrink: 0, borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.12)' }}
   >
-    <rect width="64" height="64" rx="14" fill="#0078D4" />
-    <path d="M28 14H50C54.418 14 58 17.582 58 22V42C58 46.418 54.418 50 50 50H28V14Z" fill="#106EBE" />
-    <rect x="7" y="16" width="30" height="32" rx="6" fill="#0078D4" stroke="#2886DE" strokeWidth="1" />
-    <text
-      x="22"
-      y="38.5"
-      textAnchor="middle"
-      fill="#FFFFFF"
-      fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif"
-      fontSize="20"
-      fontWeight="700"
-    >
-      O
-    </text>
+    {/* Background Document / Grid with rounded top */}
+    <path
+      d="M21 5H51C55.4183 5 59 8.58172 59 13V36H21V5Z"
+      fill="#0078D4"
+    />
+    {/* Grid Tiles */}
+    <rect x="21" y="10" width="12" height="13" fill="#1490DF" />
+    <rect x="33" y="10" width="13" height="13" fill="#28A8EA" />
+    <rect x="46" y="10" width="13" height="13" fill="#0078D4" />
+    <rect x="21" y="23" width="12" height="13" fill="#005A9E" />
+    <rect x="33" y="23" width="13" height="13" fill="#0078D4" />
+    <rect x="46" y="23" width="13" height="13" fill="#1490DF" />
+
+    {/* Envelope Body (Cyan Blue) */}
+    <path
+      d="M17 36H59V51C59 55.4183 55.4183 59 51 59H25C20.5817 59 17 55.4183 17 51V36Z"
+      fill="#1490DF"
+    />
+    {/* Darker Fold Shadow */}
+    <path
+      d="M17 36L39 49.5C40.2 50.2 41.8 50.2 43 49.5L59 40V36H17Z"
+      fill="#005A9E"
+      opacity="0.45"
+    />
+    {/* Envelope Flap Highlight */}
+    <path
+      d="M17 59L41 45L59 56V59H17Z"
+      fill="#28A8EA"
+      opacity="0.8"
+    />
+    {/* Side Fold Detail */}
+    <path
+      d="M59 39V53L47 46L59 39Z"
+      fill="#004C87"
+      opacity="0.55"
+    />
+
+    {/* Elevated Front 'O' Tile with Soft Drop Shadow */}
+    <g filter="url(#outlook-shadow)">
+      <rect x="3" y="16" width="32" height="32" rx="7" fill="#0078D4" />
+      {/* Crisp White 'O' */}
+      <circle cx="19" cy="32" r="8" stroke="#FFFFFF" strokeWidth="4.6" fill="none" />
+    </g>
+
+    <defs>
+      <filter id="outlook-shadow" x="0" y="14" width="38" height="38" filterUnits="userSpaceOnUse">
+        <feDropShadow dx="1" dy="2" stdDeviation="2" floodColor="#000000" floodOpacity="0.3" />
+      </filter>
+    </defs>
   </svg>
 );
 
