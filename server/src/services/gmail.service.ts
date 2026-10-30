@@ -854,16 +854,37 @@ export class GmailService {
       console.log(`[GmailSync] Authenticating Gmail client for user ${user.email} (${userId})...`);
       const gmail = await this.getAuthenticatedGmailClient(userId);
 
-      // Targeted query for job-related or sent emails in the last 45 days
-      // Drastically reduces scanning from 60 random spam/newsletter emails to ~10-25 relevant messages
-      const listRes = await gmail.users.messages.list({
-        userId: 'me',
-        q: 'newer_than:45d (label:SENT OR subject:(application OR applied OR interview OR assessment OR offer OR candidate OR recruiter OR "coding test" OR "hiring" OR "thank you"))',
-        maxResults: 35
+      // Note: gmail.metadata scope does not allow 'q' search parameter.
+      // Fetch latest messages from INBOX and SENT in parallel (100% compliant with gmail.metadata scope)
+      const [inboxRes, sentRes] = await Promise.all([
+        gmail.users.messages.list({
+          userId: 'me',
+          labelIds: ['INBOX'],
+          maxResults: 18,
+          includeSpamTrash: false
+        }),
+        gmail.users.messages.list({
+          userId: 'me',
+          labelIds: ['SENT'],
+          maxResults: 12,
+          includeSpamTrash: false
+        })
+      ]);
+
+      const rawMessages = [
+        ...(inboxRes.data.messages || []),
+        ...(sentRes.data.messages || [])
+      ];
+
+      // Deduplicate by message ID
+      const seenIds = new Set<string>();
+      const messages = rawMessages.filter((m) => {
+        if (!m.id || seenIds.has(m.id)) return false;
+        seenIds.add(m.id);
+        return true;
       });
 
-      const messages = listRes.data.messages || [];
-      console.log(`[GmailSync] Found ${messages.length} targeted recent messages in mailbox.`);
+      console.log(`[GmailSync] Found ${messages.length} recent messages across INBOX and SENT.`);
       if (messages.length === 0) {
         return { syncedCount: 0, message: 'Gmail is up to date. No new applications found.' };
       }
