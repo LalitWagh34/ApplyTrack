@@ -65,6 +65,35 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isTestingPush, setIsTestingPush] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const statusTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Helper to show status with auto-dismiss (default: 5 seconds)
+  const showStatus = (type: 'success' | 'error', text: string, autoDismissMs: number = 5000) => {
+    if (statusTimerRef.current) {
+      clearTimeout(statusTimerRef.current);
+    }
+    setStatusMessage({ type, text });
+    if (autoDismissMs > 0) {
+      statusTimerRef.current = setTimeout(() => {
+        setStatusMessage(null);
+      }, autoDismissMs);
+    }
+  };
+
+  const clearStatus = () => {
+    if (statusTimerRef.current) {
+      clearTimeout(statusTimerRef.current);
+    }
+    setStatusMessage(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (statusTimerRef.current) {
+        clearTimeout(statusTimerRef.current);
+      }
+    };
+  }, []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -108,12 +137,12 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setStatusMessage({ type: 'error', text: 'Please upload an image file (PNG, JPG, WebP).' });
+      showStatus('error', 'Please upload an image file (PNG, JPG, WebP).');
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      setStatusMessage({ type: 'error', text: 'Image size should be under 2MB.' });
+      showStatus('error', 'Image size should be under 2MB.');
       return;
     }
 
@@ -121,7 +150,7 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
     reader.onload = () => {
       const result = reader.result as string;
       setAvatarUrl(result);
-      setStatusMessage({ type: 'success', text: 'New photo selected! Click "Update Profile" to save.' });
+      showStatus('success', 'New photo selected! Click "Update Profile" to save.');
     };
     reader.readAsDataURL(file);
   };
@@ -132,16 +161,16 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
       // Revert to Google account picture format
       const googlePic = `https://lh3.googleusercontent.com/a/default-user`;
       setAvatarUrl(googlePic);
-      setStatusMessage({ type: 'success', text: 'Original Google photo fetched!' });
+      showStatus('success', 'Original Google photo fetched!');
     } else {
-      setStatusMessage({ type: 'error', text: 'No external OAuth provider linked for this account.' });
+      showStatus('error', 'No external OAuth provider linked for this account.');
     }
   };
 
   // Remove Photo (reset to monogram)
   const handleRemovePhoto = () => {
     setAvatarUrl(null);
-    setStatusMessage({ type: 'success', text: 'Photo removed. Monogram will be used.' });
+    showStatus('success', 'Photo removed. Monogram will be used.');
   };
 
   // Handle Resume PDF file selection
@@ -150,12 +179,12 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
     if (!file) return;
 
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-      setStatusMessage({ type: 'error', text: 'Please upload a PDF file (.pdf).' });
+      showStatus('error', 'Please upload a PDF file (.pdf).');
       return;
     }
 
     setIsUploading(true);
-    setStatusMessage(null);
+    clearStatus();
 
     try {
       const reader = new FileReader();
@@ -175,16 +204,13 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
             if (p.topProjects) setTopProjects(p.topProjects.join('\n'));
           }
 
-          setStatusMessage({
-            type: 'success',
-            text: '⚡ Resume parsed by Groq AI! Fields auto-filled below.'
-          });
+          showStatus('success', '⚡ Resume parsed by Groq AI! Fields auto-filled below.');
 
           const updated = await profileApi.getProfile();
           if (updated) onProfileUpdated(updated);
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : 'Failed to parse resume';
-          setStatusMessage({ type: 'error', text: msg });
+          showStatus('error', msg);
         } finally {
           setIsUploading(false);
         }
@@ -192,13 +218,13 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
 
       reader.onerror = () => {
         setIsUploading(false);
-        setStatusMessage({ type: 'error', text: 'Failed to read file.' });
+        showStatus('error', 'Failed to read file.');
       };
 
       reader.readAsDataURL(file);
     } catch {
       setIsUploading(false);
-      setStatusMessage({ type: 'error', text: 'Error reading file.' });
+      showStatus('error', 'Error reading file.');
     } finally {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -210,7 +236,7 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
   const handleTogglePush = async () => {
     if (isTogglingPush) return;
     setIsTogglingPush(true);
-    setStatusMessage(null);
+    clearStatus();
 
     try {
       if (isPushEnabled) {
@@ -219,7 +245,7 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
         setPushStatusText('Disabled');
         const updated = await profileApi.updateProfile({ notificationsEnabled: false });
         if (updated) onProfileUpdated(updated);
-        setStatusMessage({ type: 'success', text: 'Push notifications disabled.' });
+        showStatus('success', 'Push notifications disabled.');
       } else {
         const perm = notificationsApi.getPermission();
         if (perm === 'denied') {
@@ -231,11 +257,11 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
         setPushStatusText('Enabled');
         const updated = await profileApi.updateProfile({ notificationsEnabled: true });
         if (updated) onProfileUpdated(updated);
-        setStatusMessage({ type: 'success', text: '🔔 Desktop & Mobile Push Notifications enabled!' });
+        showStatus('success', '🔔 Desktop & Mobile Push Notifications enabled!');
       }
     } catch (err: any) {
       console.error('Failed to toggle notifications:', err);
-      setStatusMessage({ type: 'error', text: err.message || 'Failed to toggle notifications.' });
+      showStatus('error', err.message || 'Failed to toggle notifications.');
     } finally {
       setIsTogglingPush(false);
     }
@@ -246,9 +272,9 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
     setIsTestingPush(true);
     try {
       const msg = await notificationsApi.sendTestPush();
-      setStatusMessage({ type: 'success', text: `✅ ${msg}` });
+      showStatus('success', `✅ ${msg}`, 5000);
     } catch (err: any) {
-      setStatusMessage({ type: 'error', text: err.message || 'Enable push notifications first.' });
+      showStatus('error', err.message || 'Enable push notifications first.', 5000);
     } finally {
       setIsTestingPush(false);
     }
@@ -273,7 +299,7 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
   // Save All Changes
   const handleSave = async () => {
     setIsSaving(true);
-    setStatusMessage(null);
+    clearStatus();
 
     try {
       const projectsArr = topProjects
@@ -293,13 +319,13 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
       });
 
       onProfileUpdated(updated);
-      setStatusMessage({ type: 'success', text: '✅ Profile & Settings successfully updated!' });
+      showStatus('success', '✅ Profile & Settings successfully updated!', 3000);
       setTimeout(() => {
         onClose();
       }, 900);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to save changes';
-      setStatusMessage({ type: 'error', text: msg });
+      showStatus('error', msg, 5000);
     } finally {
       setIsSaving(false);
     }
@@ -333,7 +359,8 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          maxHeight: '92vh'
+          maxHeight: '92vh',
+          position: 'relative'
         }}
       >
         {/* Header: Title & Close Button (Image 3 Inspiration) */}
@@ -397,27 +424,6 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
 
         {/* Scrollable Body Content */}
         <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          {/* Status Alert Banner */}
-          {statusMessage && (
-            <div
-              style={{
-                padding: '10px 14px',
-                borderRadius: '10px',
-                fontSize: '0.8rem',
-                fontWeight: 500,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                backgroundColor: statusMessage.type === 'success' ? 'rgba(22, 163, 74, 0.1)' : 'rgba(244, 63, 94, 0.1)',
-                border: `1px solid ${statusMessage.type === 'success' ? 'rgba(22, 163, 74, 0.3)' : 'rgba(244, 63, 94, 0.3)'}`,
-                color: statusMessage.type === 'success' ? '#16a34a' : 'var(--stage-rejected)'
-              }}
-            >
-              {statusMessage.type === 'success' ? <CheckCircle2 size={16} /> : <ShieldAlert size={16} />}
-              <span>{statusMessage.text}</span>
-            </div>
-          )}
-
           {/* CARD 1: PERSONAL PROFILE (Exact Reference Image 3 Design) */}
           <div
             style={{
@@ -1011,6 +1017,59 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
             <span>{isSaving ? 'Updating...' : 'Update Profile'}</span>
           </button>
         </div>
+
+        {/* Floating Toaster Notification (Auto-dismisses in 5s) */}
+        {statusMessage && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '72px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 120,
+              maxWidth: '90%',
+              width: 'max-content',
+              padding: '10px 16px',
+              borderRadius: '12px',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              backgroundColor: statusMessage.type === 'success' ? '#0f291e' : '#2b1117',
+              border: `1px solid ${statusMessage.type === 'success' ? 'rgba(34, 197, 94, 0.4)' : 'rgba(244, 63, 94, 0.4)'}`,
+              color: statusMessage.type === 'success' ? '#4ade80' : '#fb7185',
+              boxShadow: '0 8px 28px rgba(0, 0, 0, 0.45)',
+              backdropFilter: 'blur(10px)',
+              animation: 'fadeInUp 0.22s ease-out'
+            }}
+          >
+            {statusMessage.type === 'success' ? (
+              <CheckCircle2 size={16} style={{ flexShrink: 0, color: '#22c55e' }} />
+            ) : (
+              <ShieldAlert size={16} style={{ flexShrink: 0, color: '#f43f5e' }} />
+            )}
+            <span style={{ lineHeight: 1.4 }}>{statusMessage.text}</span>
+            <button
+              type="button"
+              onClick={clearStatus}
+              aria-label="Dismiss toast"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'currentColor',
+                cursor: 'pointer',
+                padding: '2px',
+                opacity: 0.7,
+                marginLeft: '6px',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
