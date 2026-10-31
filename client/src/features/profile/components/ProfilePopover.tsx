@@ -78,7 +78,7 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
       setTopSkills(Array.isArray(prefs.topSkills) ? prefs.topSkills.slice(0, 4) : []);
       setPortfolioLink(prefs.portfolioLink || '');
       setTopProjects(Array.isArray(prefs.topProjects) ? prefs.topProjects.join('\n') : '');
-      setFollowUpCadence(typeof prefs.followUpCadenceDays === 'number' ? prefs.followUpCadenceDays : 7);
+      setFollowUpCadence(typeof (prefs as any)?.followUpCadenceDays === 'number' ? (prefs as any).followUpCadenceDays : 7);
 
       // Check current browser push permission
       const perm = notificationsApi.getPermission();
@@ -115,7 +115,7 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
 
   // Revert / Fetch Login Photo from Google OAuth
   const handleFetchLoginPhoto = () => {
-    if (user.googleId) {
+    if (user.googleId || user.hasGoogleLinked) {
       // Revert to Google account picture format
       const googlePic = `https://lh3.googleusercontent.com/a/default-user`;
       setAvatarUrl(googlePic);

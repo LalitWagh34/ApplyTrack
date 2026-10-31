@@ -16,6 +16,7 @@ import { applicationRoutes } from './modules/applications/applications.routes.js
 import { webhookRoutes } from './modules/webhooks/webhooks.routes.js';
 import { followUpRoutes } from './modules/followups/followups.routes.js';
 import { profileRoutes } from './modules/profile/profile.routes.js';
+import { notificationRoutes } from './modules/notifications/notifications.routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -86,6 +87,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(webhookRoutes, { prefix: '/api/v1/webhooks' });
   await app.register(followUpRoutes, { prefix: '/api/v1/followups' });
   await app.register(profileRoutes, { prefix: '/api/v1/profile' });
+  await app.register(notificationRoutes, { prefix: '/api/v1/notifications' });
 
   return app;
 }

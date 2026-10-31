@@ -9,11 +9,14 @@ export interface User {
   avatarUrl?: string | null;
   hasGoogleLinked?: boolean;
   hasGithubLinked?: boolean;
+  googleId?: string | null;
+  githubId?: string | null;
   preferences?: {
     targetRole?: string;
     topSkills?: string[];
     portfolioLink?: string;
     topProjects?: string[];
+    followUpCadenceDays?: number;
   };
 }
 
