@@ -104,7 +104,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             Pipeline Stats & Analytics
           </h1>
           <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            Cal AI real-time tracking performance, conversion velocity, and follow-up reminders.
+             Real-time tracking performance, conversion velocity, and follow-up reminders.
           </p>
         </div>
 

@@ -20,14 +20,17 @@ export interface ProfilePreferences {
   topSkills?: string[];
   portfolioLink?: string;
   topProjects?: string[];
+  followUpCadenceDays?: number;
 }
 
 export interface UpdateProfilePayload {
   fullName?: string;
+  avatarUrl?: string | null;
   targetRole?: string;
   topSkills?: string[];
   portfolioLink?: string;
   topProjects?: string[];
+  followUpCadenceDays?: number;
 }
 
 export const profileApi = {

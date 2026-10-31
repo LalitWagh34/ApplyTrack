@@ -42,7 +42,8 @@ export class ProfileService {
         targetRole: prefs.targetRole || '',
         topSkills: Array.isArray(prefs.topSkills) ? prefs.topSkills : [],
         portfolioLink: prefs.portfolioLink || '',
-        topProjects: Array.isArray(prefs.topProjects) ? prefs.topProjects : []
+        topProjects: Array.isArray(prefs.topProjects) ? prefs.topProjects : [],
+        followUpCadenceDays: typeof prefs.followUpCadenceDays === 'number' ? prefs.followUpCadenceDays : 7
       }
     };
   }
@@ -162,13 +163,15 @@ Do not wrap with markdown code blocks or add conversational text. Return only va
       ...(data.targetRole !== undefined && { targetRole: data.targetRole }),
       ...(data.topSkills !== undefined && { topSkills: data.topSkills.slice(0, 4) }),
       ...(data.portfolioLink !== undefined && { portfolioLink: data.portfolioLink }),
-      ...(data.topProjects !== undefined && { topProjects: data.topProjects.slice(0, 3) })
+      ...(data.topProjects !== undefined && { topProjects: data.topProjects.slice(0, 3) }),
+      ...(data.followUpCadenceDays !== undefined && { followUpCadenceDays: data.followUpCadenceDays })
     };
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
         ...(data.fullName !== undefined && { fullName: data.fullName }),
+        ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
         preferences: updatedPrefs as any
       },
       select: {

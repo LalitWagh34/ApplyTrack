@@ -2,7 +2,7 @@
  * Main Top Navigation Bar
  * View switcher pills, search input, and quick actions matching Image 1
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { User } from '../features/auth/types/auth.types.js';
 import { ActiveNavView } from './Sidebar.js';
 import {
@@ -15,9 +15,11 @@ import {
   RotateCw,
   Briefcase,
   Sun,
-  Moon
+  Moon,
+  ChevronDown
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext.js';
+import { ProfileDropdown } from '../features/profile/components/ProfileDropdown.js';
 
 interface NavbarProps {
   activeView: ActiveNavView;
@@ -45,11 +47,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenNewModal,
   user,
   onOpenLogin,
+  onLogout,
   onSyncGmail,
   isSyncing = false,
   onOpenProfile
 }) => {
   const { theme, toggleTheme } = useTheme();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const views: Array<{ id: ActiveNavView; label: string; icon: React.ElementType; badge?: number }> = [
     { id: 'board', label: 'Board', icon: Trello },
@@ -272,78 +276,93 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span>New</span>
         </button>
 
-        {/* User Avatar / Profile Popover Trigger */}
+        {/* User Avatar / Profile Dropdown Trigger */}
         {user ? (
-          <button
-            onClick={onOpenProfile}
-            title={`${user.fullName || user.email} • Click to open AI Context Profile`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '7px',
-              height: '34px',
-              padding: '0 8px 0 3px',
-              borderRadius: '9999px',
-              border: '1px solid var(--border-color)',
-              backgroundColor: 'var(--bg-subtle)',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            {user.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt={user.fullName || 'User'}
-                style={{
-                  width: '26px',
-                  height: '26px',
-                  borderRadius: '50%'
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: '26px',
-                  height: '26px',
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--accent)',
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 700,
-                  fontSize: '0.74rem'
-                }}
-              >
-                {(user.fullName || user.email)[0].toUpperCase()}
-              </div>
-            )}
-            <span
-              className="desktop-only"
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setIsDropdownOpen((prev) => !prev)}
+              title={`${user.fullName || user.email} • Click for account options`}
               style={{
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                maxWidth: '90px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
+                display: 'flex',
+                alignItems: 'center',
+                gap: '7px',
+                height: '34px',
+                padding: '0 8px 0 3px',
+                borderRadius: '9999px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: isDropdownOpen ? 'var(--bg-surface)' : 'var(--bg-subtle)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
               }}
             >
-              {user.fullName ? user.fullName.split(' ')[0] : 'Profile'}
-            </span>
-            {user.hasGoogleLinked && (
+              {user.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.fullName || 'User'}
+                  style={{
+                    width: '26px',
+                    height: '26px',
+                    borderRadius: '50%',
+                    objectFit: 'cover'
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: '26px',
+                    height: '26px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--accent)',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 700,
+                    fontSize: '0.74rem'
+                  }}
+                >
+                  {(user.fullName || user.email)[0].toUpperCase()}
+                </div>
+              )}
               <span
+                className="desktop-only"
                 style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--stage-offer)'
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  maxWidth: '90px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
                 }}
-                title="Gmail Sync Active"
+              >
+                {user.fullName ? user.fullName.split(' ')[0] : 'Profile'}
+              </span>
+              <ChevronDown
+                size={13}
+                style={{
+                  color: 'var(--text-muted)',
+                  transform: isDropdownOpen ? 'rotate(180deg)' : 'none',
+                  transition: 'transform 0.15s ease'
+                }}
               />
-            )}
-          </button>
+            </button>
+
+            {/* Step 1: Quick Profile Dropdown Popover (Image 2 Inspiration) */}
+            <ProfileDropdown
+              isOpen={isDropdownOpen}
+              onClose={() => setIsDropdownOpen(false)}
+              user={user}
+              onEditProfile={() => {
+                setIsDropdownOpen(false);
+                if (onOpenProfile) onOpenProfile();
+              }}
+              onLogout={() => {
+                setIsDropdownOpen(false);
+                onLogout();
+              }}
+            />
+          </div>
         ) : (
           <button
             onClick={onOpenLogin}

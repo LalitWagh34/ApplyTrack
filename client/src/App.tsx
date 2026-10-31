@@ -482,6 +482,7 @@ export function AppContent() {
         onProfileUpdated={(updatedUser) => {
           setUser(updatedUser);
         }}
+        applications={applications}
       />
     </div>
   );

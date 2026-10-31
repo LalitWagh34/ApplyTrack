@@ -8,6 +8,7 @@ export interface UserPreferences {
   topSkills?: string[];
   portfolioLink?: string;
   topProjects?: string[];
+  followUpCadenceDays?: number;
 }
 
 export interface ProfileResponse {
@@ -27,8 +28,10 @@ export interface ParseResumeRequest {
 
 export interface UpdateProfileRequest {
   fullName?: string;
+  avatarUrl?: string | null;
   targetRole?: string;
   topSkills?: string[];
   portfolioLink?: string;
   topProjects?: string[];
+  followUpCadenceDays?: number;
 }

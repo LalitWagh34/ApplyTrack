@@ -1,25 +1,30 @@
 /**
- * ProfilePopover Component
- * Linear.app style Popover (Desktop) / Bottom-Sheet (Mobile)
- * Instant Resume PDF parser via Groq AI & user context for Follow-Up Ghostwriter
+ * ProfilePopover / ProfileSettingsModal Component
+ * Inspired by reference Image 3: Modular card layout for Personal Profile, AI Context, Notifications & CSV Export
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../../auth/types/auth.types.js';
-import { profileApi, ProfilePreferences } from '../api/profileApi.js';
-import { 
-  X, 
-  Upload, 
-  FileText, 
-  CheckCircle2, 
-  Sparkles, 
-  LogOut, 
-  Link2, 
-  Briefcase, 
-  Code2, 
-  Plus, 
-  Check, 
-  Zap, 
-  RotateCw 
+import { profileApi } from '../api/profileApi.js';
+import { notificationsApi } from '../../notifications/api/notificationsApi.js';
+import { Application } from '../../applications/types/application.types.js';
+import { exportApplicationsToCSV } from '../../../utils/csvExport.utils.js';
+import {
+  X,
+  FileText,
+  CheckCircle2,
+  Sparkles,
+  Link2,
+  Briefcase,
+  Code2,
+  Check,
+  RotateCw,
+  Bell,
+  Download,
+  Upload,
+  RefreshCw,
+  Trash2,
+  ShieldAlert,
+  Send
 } from 'lucide-react';
 
 interface ProfilePopoverProps {
@@ -28,43 +33,106 @@ interface ProfilePopoverProps {
   user: User | null;
   onLogout: () => void;
   onProfileUpdated: (updatedUser: User) => void;
+  applications?: Application[];
 }
 
 export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
   isOpen,
   onClose,
   user,
-  onLogout,
-  onProfileUpdated
+  onProfileUpdated,
+  applications = []
 }) => {
+  // Personal Profile state
   const [fullName, setFullName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [targetRole, setTargetRole] = useState('');
+
+  // AI Ghostwriter context
   const [topSkills, setTopSkills] = useState<string[]>([]);
   const [newSkillInput, setNewSkillInput] = useState('');
   const [portfolioLink, setPortfolioLink] = useState('');
   const [topProjects, setTopProjects] = useState('');
+
+  // Preferences & Notifications
+  const [followUpCadence, setFollowUpCadence] = useState<number>(7);
+  const [isPushEnabled, setIsPushEnabled] = useState(false);
+  const [pushStatusText, setPushStatusText] = useState('');
+
+  // Status & Loaders
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isTestingPush, setIsTestingPush] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync state whenever user changes or modal opens
+  // Sync state on user load or modal open
   useEffect(() => {
     if (user) {
       setFullName(user.fullName || '');
+      setAvatarUrl(user.avatarUrl || null);
       const prefs = user.preferences || {};
       setTargetRole(prefs.targetRole || '');
       setTopSkills(Array.isArray(prefs.topSkills) ? prefs.topSkills.slice(0, 4) : []);
       setPortfolioLink(prefs.portfolioLink || '');
       setTopProjects(Array.isArray(prefs.topProjects) ? prefs.topProjects.join('\n') : '');
+      setFollowUpCadence(typeof prefs.followUpCadenceDays === 'number' ? prefs.followUpCadenceDays : 7);
+
+      // Check current browser push permission
+      const perm = notificationsApi.getPermission();
+      setIsPushEnabled(perm === 'granted');
+      setPushStatusText(perm === 'granted' ? 'Enabled' : perm === 'denied' ? 'Blocked by Browser' : 'Disabled');
     }
   }, [user, isOpen]);
 
   if (!isOpen || !user) return null;
 
-  // Handle PDF file selection
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle Custom Photo Upload
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setStatusMessage({ type: 'error', text: 'Please upload an image file (PNG, JPG, WebP).' });
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setStatusMessage({ type: 'error', text: 'Image size should be under 2MB.' });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setAvatarUrl(result);
+      setStatusMessage({ type: 'success', text: 'New photo selected! Click "Update Profile" to save.' });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Revert / Fetch Login Photo from Google OAuth
+  const handleFetchLoginPhoto = () => {
+    if (user.googleId) {
+      // Revert to Google account picture format
+      const googlePic = `https://lh3.googleusercontent.com/a/default-user`;
+      setAvatarUrl(googlePic);
+      setStatusMessage({ type: 'success', text: 'Original Google photo fetched!' });
+    } else {
+      setStatusMessage({ type: 'error', text: 'No external OAuth provider linked for this account.' });
+    }
+  };
+
+  // Remove Photo (reset to monogram)
+  const handleRemovePhoto = () => {
+    setAvatarUrl(null);
+    setStatusMessage({ type: 'success', text: 'Photo removed. Monogram will be used.' });
+  };
+
+  // Handle Resume PDF file selection
+  const handleResumeFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -99,7 +167,6 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
             text: '⚡ Resume parsed by Groq AI! Fields auto-filled below.'
           });
 
-          // Fetch refreshed profile
           const updated = await profileApi.getProfile();
           if (updated) onProfileUpdated(updated);
         } catch (err: unknown) {
@@ -118,7 +185,7 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
       reader.readAsDataURL(file);
     } catch {
       setIsUploading(false);
-      setStatusMessage({ type: 'error', text: 'Error selecting file.' });
+      setStatusMessage({ type: 'error', text: 'Error reading file.' });
     } finally {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -126,7 +193,39 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
     }
   };
 
-  // Add a skill chip
+  // Toggle Web Push Notifications
+  const handleTogglePush = async () => {
+    try {
+      if (isPushEnabled) {
+        await notificationsApi.unsubscribe();
+        setIsPushEnabled(false);
+        setPushStatusText('Disabled');
+        setStatusMessage({ type: 'success', text: 'Push notifications disabled.' });
+      } else {
+        await notificationsApi.subscribe();
+        setIsPushEnabled(true);
+        setPushStatusText('Enabled');
+        setStatusMessage({ type: 'success', text: '🔔 Desktop & Mobile Push Notifications enabled!' });
+      }
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.message || 'Failed to toggle notifications.' });
+    }
+  };
+
+  // Send Test Push Notification
+  const handleTestPush = async () => {
+    setIsTestingPush(true);
+    try {
+      const msg = await notificationsApi.sendTestPush();
+      setStatusMessage({ type: 'success', text: `✅ ${msg}` });
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.message || 'Enable push notifications first.' });
+    } finally {
+      setIsTestingPush(false);
+    }
+  };
+
+  // Add / Remove Skills
   const handleAddSkill = (e?: React.KeyboardEvent | React.MouseEvent) => {
     if (e && 'key' in e && e.key !== 'Enter') return;
     if (e) e.preventDefault();
@@ -138,12 +237,11 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
     }
   };
 
-  // Remove a skill chip
   const handleRemoveSkill = (skillToRemove: string) => {
     setTopSkills(topSkills.filter((s) => s !== skillToRemove));
   };
 
-  // Save updated context
+  // Save All Changes
   const handleSave = async () => {
     setIsSaving(true);
     setStatusMessage(null);
@@ -156,17 +254,19 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
 
       const updated = await profileApi.updateProfile({
         fullName,
+        avatarUrl,
         targetRole,
         topSkills,
         portfolioLink,
-        topProjects: projectsArr
+        topProjects: projectsArr,
+        followUpCadenceDays: followUpCadence
       });
 
       onProfileUpdated(updated);
-      setStatusMessage({ type: 'success', text: 'AI Context saved! Follow-up drafts updated.' });
+      setStatusMessage({ type: 'success', text: '✅ Profile & Settings successfully updated!' });
       setTimeout(() => {
         onClose();
-      }, 1000);
+      }, 900);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to save changes';
       setStatusMessage({ type: 'error', text: msg });
@@ -175,258 +275,381 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
     }
   };
 
+  const initial = (fullName || user.email || 'U')[0].toUpperCase();
+
   return (
     <div
       className="modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 60,
+        zIndex: 90,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '16px',
         backgroundColor: 'rgba(0, 0, 0, 0.65)',
-        backdropFilter: 'blur(4px)'
+        backdropFilter: 'blur(5px)'
       }}
     >
       <div
         style={{
           width: '100%',
-          maxWidth: '460px',
+          maxWidth: '540px',
           backgroundColor: 'var(--bg-surface)',
           border: '1px solid var(--border-color)',
-          borderRadius: '14px',
+          borderRadius: '18px',
           boxShadow: 'var(--shadow-lg)',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          maxHeight: '90vh'
+          maxHeight: '92vh'
         }}
       >
-        {/* 1. Header: Avatar, Name, Email, Google Status */}
+        {/* Header: Title & Close Button (Image 3 Inspiration) */}
         <div
           style={{
-            padding: '16px 20px',
+            padding: '18px 24px 14px',
             borderBottom: '1px solid var(--border-color)',
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'space-between',
             backgroundColor: 'var(--bg-subtle)'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {user.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt={user.fullName || 'User'}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h2
                 style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  border: '2px solid var(--border-color)'
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--accent)',
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 700,
-                  fontSize: '1rem'
+                  fontSize: '1.2rem',
+                  fontWeight: 800,
+                  color: 'var(--text-primary)',
+                  letterSpacing: '-0.02em',
+                  margin: 0
                 }}
               >
-                {(user.fullName || user.email)[0].toUpperCase()}
-              </div>
-            )}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h3 style={{ fontSize: '0.96rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {user.fullName || 'Candidate Profile'}
-                </h3>
-                {user.hasGoogleLinked && (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '0.65rem',
-                      fontWeight: 600,
-                      color: 'var(--stage-offer)',
-                      backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                      padding: '1px 6px',
-                      borderRadius: '9999px',
-                      border: '1px solid rgba(16, 185, 129, 0.3)'
-                    }}
-                  >
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--stage-offer)' }} />
-                    Gmail Synced
-                  </span>
-                )}
-              </div>
-              <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                {user.email}
-              </p>
+                Profile & Job Search Settings
+              </h2>
+              <span
+                style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: '9999px',
+                  backgroundColor: 'rgba(22, 163, 74, 0.12)',
+                  color: '#16a34a',
+                  border: '1px solid rgba(22, 163, 74, 0.25)'
+                }}
+              >
+                Account
+              </span>
             </div>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>
+              Configure your identity, AI ghostwriter context, notifications, and export options.
+            </p>
           </div>
 
           <button
             onClick={onClose}
+            aria-label="Close"
             style={{
               background: 'none',
               border: 'none',
               color: 'var(--text-muted)',
               cursor: 'pointer',
-              padding: '6px',
+              padding: '4px',
               borderRadius: '6px'
             }}
           >
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
 
         {/* Scrollable Body Content */}
-        <div style={{ padding: '18px 20px', overflowY: 'auto', flex: 1 }}>
+        <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          {/* Status Alert Banner */}
           {statusMessage && (
             <div
               style={{
-                marginBottom: '14px',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                fontSize: '0.78rem',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                fontSize: '0.8rem',
                 fontWeight: 500,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                backgroundColor: statusMessage.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(244, 63, 94, 0.1)',
-                border: `1px solid ${statusMessage.type === 'success' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)'}`,
-                color: statusMessage.type === 'success' ? 'var(--stage-offer)' : 'var(--stage-rejected)'
+                backgroundColor: statusMessage.type === 'success' ? 'rgba(22, 163, 74, 0.1)' : 'rgba(244, 63, 94, 0.1)',
+                border: `1px solid ${statusMessage.type === 'success' ? 'rgba(22, 163, 74, 0.3)' : 'rgba(244, 63, 94, 0.3)'}`,
+                color: statusMessage.type === 'success' ? '#16a34a' : 'var(--stage-rejected)'
               }}
             >
-              {statusMessage.type === 'success' ? <CheckCircle2 size={15} /> : <X size={15} />}
+              {statusMessage.type === 'success' ? <CheckCircle2 size={16} /> : <ShieldAlert size={16} />}
               <span>{statusMessage.text}</span>
             </div>
           )}
 
-          {/* 2. Primary Hero Action: Upload Resume Button */}
-          <div style={{ marginBottom: '18px' }}>
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept=".pdf"
-              style={{ display: 'none' }}
-              onChange={handleFileChange}
-            />
-            <button
-              type="button"
-              disabled={isUploading}
-              onClick={() => fileInputRef.current?.click()}
+          {/* CARD 1: PERSONAL PROFILE (Exact Reference Image 3 Design) */}
+          <div
+            style={{
+              backgroundColor: 'var(--bg-subtle)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '14px',
+              padding: '18px'
+            }}
+          >
+            <h3 style={{ fontSize: '0.96rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+              Personal Profile
+            </h3>
+            <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', margin: '2px 0 16px' }}>
+              Manage your identity details and custom photo.
+            </p>
+
+            {/* Photo Avatar Preview & Action Buttons */}
+            <div
               style={{
-                width: '100%',
-                padding: '12px 16px',
-                borderRadius: '10px',
-                border: '1.5px dashed var(--accent)',
-                backgroundColor: 'var(--accent-subtle)',
-                color: 'var(--text-primary)',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '10px',
-                cursor: isUploading ? 'not-allowed' : 'pointer',
-                transition: 'all 0.15s ease'
+                gap: '12px',
+                padding: '16px',
+                borderRadius: '12px',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-color)',
+                marginBottom: '16px'
               }}
             >
-              {isUploading ? (
-                <>
-                  <RotateCw size={17} style={{ color: 'var(--accent)', animation: 'spin 1s linear infinite' }} />
-                  <span style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--accent)' }}>
-                    Parsing Resume with Groq AI...
-                  </span>
-                </>
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={fullName || 'Avatar'}
+                  style={{
+                    width: '74px',
+                    height: '74px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '3px solid var(--border-color)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  }}
+                />
               ) : (
-                <>
-                  <FileText size={18} style={{ color: 'var(--accent)' }} />
-                  <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--accent)' }}>
-                      Upload Resume (PDF)
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                      Auto-extracts skills & projects for AI Ghostwriter • 15s setup
-                    </div>
-                  </div>
-                </>
+                <div
+                  style={{
+                    width: '74px',
+                    height: '74px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--accent)',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.75rem',
+                    fontWeight: 800,
+                    boxShadow: '0 4px 12px rgba(34, 197, 94, 0.25)'
+                  }}
+                >
+                  {initial}
+                </div>
               )}
-            </button>
+
+              {/* Photo Action Buttons (Image 3 Style) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <input
+                  type="file"
+                  ref={photoInputRef}
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handlePhotoSelect}
+                />
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '5px 12px',
+                    borderRadius: '9999px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.74rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Upload size={12} />
+                  Upload Photo
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleFetchLoginPhoto}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '5px 12px',
+                    borderRadius: '9999px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.74rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <RefreshCw size={12} />
+                  Fetch Login Photo
+                </button>
+
+                {avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '5px 12px',
+                      borderRadius: '9999px',
+                      border: '1px solid rgba(244, 63, 94, 0.2)',
+                      backgroundColor: 'rgba(244, 63, 94, 0.08)',
+                      color: '#e11d48',
+                      fontSize: '0.74rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Trash2 size={12} />
+                    Remove Photo
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Inputs: Display Name & Target Role */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
+                  Username / Display Name
+                </label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="e.g. Lalit wagh"
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-surface)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.84rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
+                  <Briefcase size={13} />
+                  Target Role / Professional Headline
+                </label>
+                <input
+                  type="text"
+                  value={targetRole}
+                  onChange={(e) => setTargetRole(e.target.value)}
+                  placeholder="e.g. Full Stack Developer, SDE-1"
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-surface)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.84rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* 3. Auto-filled / Editable Context Fields */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {/* Full Name */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
-                Your Name (for email sign-offs)
-              </label>
+          {/* CARD 2: AI GHOSTWRITER & RESUME PARSER */}
+          <div
+            style={{
+              backgroundColor: 'var(--bg-subtle)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '14px',
+              padding: '18px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+              <Sparkles size={16} style={{ color: 'var(--stage-oa)' }} />
+              <h3 style={{ fontSize: '0.96rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                AI Ghostwriter & Resume Context
+              </h3>
+            </div>
+            <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', margin: '2px 0 14px' }}>
+              Powers hyper-personalized follow-up emails using Groq Llama 3.3.
+            </p>
+
+            {/* Resume Upload Pill Button */}
+            <div style={{ marginBottom: '14px' }}>
               <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="e.g. Lalit Wagh"
+                type="file"
+                ref={fileInputRef}
+                accept=".pdf"
+                style={{ display: 'none' }}
+                onChange={handleResumeFileChange}
+              />
+              <button
+                type="button"
+                disabled={isUploading}
+                onClick={() => fileInputRef.current?.click()}
                 style={{
                   width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: '7px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-subtle)',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.82rem',
-                  outline: 'none'
+                  padding: '11px 14px',
+                  borderRadius: '10px',
+                  border: '1.5px dashed var(--accent)',
+                  backgroundColor: 'rgba(34, 197, 94, 0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  cursor: isUploading ? 'not-allowed' : 'pointer'
                 }}
-              />
+              >
+                {isUploading ? (
+                  <>
+                    <RotateCw size={16} style={{ color: 'var(--accent)', animation: 'spin 1s linear infinite' }} />
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--accent)' }}>
+                      Extracting Skills & Projects with Groq AI...
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <FileText size={17} style={{ color: 'var(--accent)' }} />
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent)' }}>
+                      Upload Resume (PDF) • Instant Auto-Fill
+                    </span>
+                  </>
+                )}
+              </button>
             </div>
 
-            {/* Target Role */}
-            <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
-                <Briefcase size={12} />
-                Target Role / Headline
-              </label>
-              <input
-                type="text"
-                value={targetRole}
-                onChange={(e) => setTargetRole(e.target.value)}
-                placeholder="e.g. Frontend Engineer, SDE-1"
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: '7px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-subtle)',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.82rem',
-                  outline: 'none'
-                }}
-              />
-            </div>
-
-            {/* Top Skills (Max 3-4 Chips) */}
-            <div>
-              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
+            {/* Top Skills */}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <Code2 size={12} />
-                  Top Skills (Max 4)
+                  <Code2 size={13} />
+                  Featured Skills (Max 4)
                 </span>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                  {topSkills.length}/4
-                </span>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{topSkills.length}/4</span>
               </label>
 
-              {/* Chips Bar */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
                 {topSkills.map((skill) => (
                   <span
@@ -437,7 +660,7 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
                       gap: '5px',
                       padding: '3px 10px',
                       borderRadius: '9999px',
-                      backgroundColor: 'var(--bg-subtle)',
+                      backgroundColor: 'var(--bg-surface)',
                       border: '1px solid var(--border-color)',
                       color: 'var(--text-primary)',
                       fontSize: '0.74rem',
@@ -448,14 +671,7 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
                     <button
                       type="button"
                       onClick={() => handleRemoveSkill(skill)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--text-muted)',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex'
-                      }}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
                     >
                       <X size={12} />
                     </button>
@@ -473,12 +689,12 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
                     placeholder="Add skill (e.g. React) and press Enter"
                     style={{
                       flex: 1,
-                      padding: '4px 8px',
-                      borderRadius: '10px',
+                      padding: '7px 10px',
+                      borderRadius: '7px',
                       border: '1px solid var(--border-color)',
-                      backgroundColor: 'var(--bg-subtle)',
+                      backgroundColor: 'var(--bg-surface)',
                       color: 'var(--text-primary)',
-                      fontSize: '0.78rem',
+                      fontSize: '0.8rem',
                       outline: 'none'
                     }}
                   />
@@ -486,8 +702,8 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
                     type="button"
                     onClick={handleAddSkill}
                     style={{
-                      padding: '6px 8px',
-                      borderRadius: '8px',
+                      padding: '7px 12px',
+                      borderRadius: '7px',
                       border: '1px solid var(--border-color)',
                       backgroundColor: 'var(--bg-surface)',
                       color: 'var(--text-primary)',
@@ -503,22 +719,22 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
             </div>
 
             {/* Portfolio Link */}
-            <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
-                <Link2 size={12} />
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
+                <Link2 size={13} />
                 Portfolio / GitHub Link
               </label>
               <input
                 type="text"
                 value={portfolioLink}
                 onChange={(e) => setPortfolioLink(e.target.value)}
-                placeholder="e.g. https://github.com/yourhandle"
+                placeholder="e.g. https://github.com/LalitWagh34"
                 style={{
                   width: '100%',
                   padding: '8px 12px',
                   borderRadius: '7px',
                   border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-subtle)',
+                  backgroundColor: 'var(--bg-surface)',
                   color: 'var(--text-primary)',
                   fontSize: '0.82rem',
                   outline: 'none'
@@ -526,23 +742,23 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
               />
             </div>
 
-            {/* Top Projects Summary */}
+            {/* Top Projects */}
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
-                <Sparkles size={12} style={{ color: 'var(--stage-oa)' }} />
-                Top Projects (Referenced by AI Ghostwriter)
+              <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
+                <Sparkles size={13} style={{ color: 'var(--stage-oa)' }} />
+                Top Projects Snippet
               </label>
               <textarea
                 rows={2}
                 value={topProjects}
                 onChange={(e) => setTopProjects(e.target.value)}
-                placeholder="e.g. Your Project"
+                placeholder="e.g. ApplyTrack - Minimal Linear-style tracker with automated Gmail Sync"
                 style={{
                   width: '100%',
                   padding: '8px 12px',
                   borderRadius: '7px',
                   border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-subtle)',
+                  backgroundColor: 'var(--bg-surface)',
                   color: 'var(--text-primary)',
                   fontSize: '0.8rem',
                   outline: 'none',
@@ -551,117 +767,217 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
               />
             </div>
           </div>
-        </div>
 
-        {/* 4. Footer: Logout & Save */}
-        <div
-          style={{
-            padding: '12px 20px',
-            borderTop: '1px solid var(--border-color)',
-            backgroundColor: 'var(--bg-subtle)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}
-        >
-          <button
-            type="button"
-            onClick={onLogout}
+          {/* CARD 3: NOTIFICATIONS & FOLLOW-UP CADENCE */}
+          <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '7px 12px',
-              borderRadius: '7px',
+              backgroundColor: 'var(--bg-subtle)',
               border: '1px solid var(--border-color)',
-              backgroundColor: 'transparent',
-              color: 'var(--stage-rejected)',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              cursor: 'pointer'
+              borderRadius: '14px',
+              padding: '18px'
             }}
           >
-            <LogOut size={13} />
-            <span>Sign Out</span>
-          </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+              <Bell size={16} style={{ color: 'var(--accent)' }} />
+              <h3 style={{ fontSize: '0.96rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                Notifications & Follow-Up Cadence
+              </h3>
+            </div>
+            <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', margin: '2px 0 14px' }}>
+              Receive lockscreen alerts for OA deadlines, tests, and dormant applications.
+            </p>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                padding: '7px 12px',
-                borderRadius: '7px',
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'transparent',
-                color: 'var(--text-secondary)',
-                fontSize: '0.78rem',
-                cursor: 'pointer'
-              }}
-            >
-              Cancel
-            </button>
-
-            <button
-              type="button"
-              disabled={isSaving}
-              onClick={handleSave}
+            {/* Web Push Toggle */}
+            <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '7px 16px',
-                borderRadius: '7px',
-                border: 'none',
-                backgroundColor: 'var(--accent)',
-                color: '#ffffff',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: isSaving ? 'not-allowed' : 'pointer',
-                boxShadow: 'var(--shadow-sm)'
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                borderRadius: '10px',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-color)',
+                marginBottom: '12px'
               }}
             >
-              <Check size={14} />
-              <span>{isSaving ? 'Saving...' : 'Save Context'}</span>
+              <div>
+                <div style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Web Push Notifications
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Status: <strong>{pushStatusText}</strong>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {isPushEnabled && (
+                  <button
+                    type="button"
+                    disabled={isTestingPush}
+                    onClick={handleTestPush}
+                    title="Send a live test notification"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '5px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-subtle)',
+                      color: 'var(--text-secondary)',
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      cursor: isTestingPush ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <Send size={11} />
+                    <span>{isTestingPush ? 'Testing...' : 'Test Alert'}</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleTogglePush}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: isPushEnabled ? 'rgba(244, 63, 94, 0.12)' : '#16a34a',
+                    color: isPushEnabled ? '#e11d48' : '#ffffff',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {isPushEnabled ? 'Disable' : 'Enable'}
+                </button>
+              </div>
+            </div>
+
+            {/* Follow-Up Cadence Selector */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
+                Default Follow-Up Cadence
+              </label>
+              <select
+                value={followUpCadence}
+                onChange={(e) => setFollowUpCadence(Number(e.target.value))}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-surface)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.82rem',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value={4}>4 Days (Aggressive Follow-up)</option>
+                <option value={7}>7 Days (Standard / Recommended)</option>
+                <option value={10}>10 Days (Relaxed Cadence)</option>
+                <option value={14}>14 Days (Two Weeks)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* CARD 4: DATA PORTABILITY & EXPORT */}
+          <div
+            style={{
+              backgroundColor: 'var(--bg-subtle)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '14px',
+              padding: '18px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+              <Download size={16} style={{ color: 'var(--accent)' }} />
+              <h3 style={{ fontSize: '0.96rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                Data Portability & Export
+              </h3>
+            </div>
+            <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', margin: '2px 0 14px' }}>
+              Export your job hunt records anytime to Excel, Google Sheets, or local storage.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => exportApplicationsToCSV(applications)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 16px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-surface)',
+                color: 'var(--text-primary)',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.12s ease'
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-subtle)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-surface)')}
+            >
+              <Download size={15} />
+              <span>Export Applications as CSV ({applications.length} records)</span>
             </button>
           </div>
         </div>
 
-        {/* Mobile-Friendly Legal Links */}
+        {/* Footer: Cancel & Update Profile (Image 3 Style) */}
         <div
           style={{
-            padding: '8px 20px',
-            backgroundColor: 'var(--bg-surface)',
+            padding: '14px 24px',
             borderTop: '1px solid var(--border-color)',
+            backgroundColor: 'var(--bg-subtle)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: '12px',
-            fontSize: '0.72rem',
-            color: 'var(--text-muted)'
+            justifyContent: 'flex-end',
+            gap: '10px'
           }}
         >
-          <a
-            href="/privacy"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color)',
+              backgroundColor: 'transparent',
+              color: 'var(--text-secondary)',
+              fontSize: '0.82rem',
+              fontWeight: 500,
+              cursor: 'pointer'
+            }}
           >
-            Privacy Policy
-          </a>
-          <span>•</span>
-          <a
-            href="/terms"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={handleSave}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '9px 22px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: '#16a34a',
+              color: '#ffffff',
+              fontSize: '0.84rem',
+              fontWeight: 700,
+              cursor: isSaving ? 'not-allowed' : 'pointer',
+              boxShadow: '0 2px 8px rgba(22, 163, 74, 0.28)'
+            }}
           >
-            Terms of Service
-          </a>
+            <Check size={16} />
+            <span>{isSaving ? 'Updating...' : 'Update Profile'}</span>
+          </button>
         </div>
       </div>
     </div>
