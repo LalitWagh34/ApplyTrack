@@ -26,6 +26,34 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
+/**
+ * Robust notification dispatcher that works across mobile (Android/PWA) and desktop.
+ * Avoids "TypeError: Illegal constructor" by using ServiceWorkerRegistration.showNotification().
+ */
+async function showLocalNotification(title: string, options?: NotificationOptions): Promise<void> {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  // 1. ServiceWorker registration (Required on Android Chrome, mobile devices, and PWAs)
+  if ('serviceWorker' in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      if (registration && typeof registration.showNotification === 'function') {
+        await registration.showNotification(title, options);
+        return;
+      }
+    } catch {
+      // Fall through to desktop constructor
+    }
+  }
+
+  // 2. Desktop fallback (where new Notification() constructor is allowed)
+  try {
+    new Notification(title, options);
+  } catch {
+    // Suppress Illegal constructor on environments where constructor is disabled
+  }
+}
+
 export const notificationsApi = {
   /**
    * Checks if browser supports ServiceWorker and PushManager
@@ -60,11 +88,22 @@ export const notificationsApi = {
    * Fetches public VAPID key from backend
    */
   async getPublicKey(): Promise<string> {
-    const res = await fetch(`${API_BASE}/vapid-key`, {
-      headers: getAuthHeaders()
-    });
-    const json = await res.json();
-    return json.data?.publicKey || '';
+    try {
+      const res = await fetch(`${API_BASE}/vapid-key`, {
+        headers: getAuthHeaders()
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.message || `Server returned ${res.status} when fetching VAPID key.`);
+      }
+      const json = await res.json();
+      return json.data?.publicKey || '';
+    } catch (err: any) {
+      if (err.name === 'TypeError' || err.message?.includes('fetch')) {
+        throw new Error('Backend server is offline. Please start it with "npm run dev:server" on port 4000.');
+      }
+      throw err;
+    }
   },
 
   /**
@@ -171,9 +210,9 @@ export const notificationsApi = {
         });
         const retryJson = await retryRes.json();
         if (!retryRes.ok) {
-          // Fallback: show instant native notification if permission granted
+          // Fallback: show instant native notification via ServiceWorker if permission granted
           if (Notification.permission === 'granted') {
-            new Notification('⚡ ApplyTrack Alert: Active!', {
+            await showLocalNotification('⚡ ApplyTrack Alert: Active!', {
               body: 'You are ready to receive OA deadlines and interview alerts directly on your device.',
               icon: '/icon.svg'
             });
@@ -188,7 +227,7 @@ export const notificationsApi = {
       return json.message || 'Test notification sent to your device!';
     } catch (err: any) {
       if (Notification.permission === 'granted') {
-        new Notification('⚡ ApplyTrack Alert: Active!', {
+        await showLocalNotification('⚡ ApplyTrack Alert: Active!', {
           body: 'You are ready to receive OA deadlines and interview alerts directly on your device.',
           icon: '/icon.svg'
         });

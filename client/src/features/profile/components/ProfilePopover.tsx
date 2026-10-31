@@ -58,6 +58,7 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
   const [followUpCadence, setFollowUpCadence] = useState<number>(7);
   const [isPushEnabled, setIsPushEnabled] = useState(false);
   const [pushStatusText, setPushStatusText] = useState('');
+  const [isTogglingPush, setIsTogglingPush] = useState(false);
 
   // Status & Loaders
   const [isUploading, setIsUploading] = useState(false);
@@ -207,6 +208,10 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
 
   // Toggle Web Push Notifications
   const handleTogglePush = async () => {
+    if (isTogglingPush) return;
+    setIsTogglingPush(true);
+    setStatusMessage(null);
+
     try {
       if (isPushEnabled) {
         await notificationsApi.unsubscribe();
@@ -216,6 +221,11 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
         if (updated) onProfileUpdated(updated);
         setStatusMessage({ type: 'success', text: 'Push notifications disabled.' });
       } else {
+        const perm = notificationsApi.getPermission();
+        if (perm === 'denied') {
+          throw new Error('Notifications are blocked by your browser. Click the lock icon 🔒 in the URL address bar to Allow.');
+        }
+
         await notificationsApi.subscribe();
         setIsPushEnabled(true);
         setPushStatusText('Enabled');
@@ -224,7 +234,10 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
         setStatusMessage({ type: 'success', text: '🔔 Desktop & Mobile Push Notifications enabled!' });
       }
     } catch (err: any) {
+      console.error('Failed to toggle notifications:', err);
       setStatusMessage({ type: 'error', text: err.message || 'Failed to toggle notifications.' });
+    } finally {
+      setIsTogglingPush(false);
     }
   };
 
@@ -854,6 +867,7 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
 
                 <button
                   type="button"
+                  disabled={isTogglingPush}
                   onClick={handleTogglePush}
                   style={{
                     padding: '6px 14px',
@@ -863,10 +877,11 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
                     color: isPushEnabled ? '#e11d48' : '#ffffff',
                     fontSize: '0.78rem',
                     fontWeight: 700,
-                    cursor: 'pointer'
+                    cursor: isTogglingPush ? 'wait' : 'pointer',
+                    opacity: isTogglingPush ? 0.7 : 1
                   }}
                 >
-                  {isPushEnabled ? 'Disable' : 'Enable'}
+                  {isTogglingPush ? 'Updating...' : isPushEnabled ? 'Disable' : 'Enable'}
                 </button>
               </div>
             </div>
