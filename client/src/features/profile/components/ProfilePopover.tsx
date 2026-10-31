@@ -65,7 +65,7 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isTestingPush, setIsTestingPush] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const statusTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Helper to show status with auto-dismiss (default: 5 seconds)
   const showStatus = (type: 'success' | 'error', text: string, autoDismissMs: number = 5000) => {
