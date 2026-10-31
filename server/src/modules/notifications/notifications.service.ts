@@ -25,19 +25,7 @@ export class NotificationsService {
     this.privateKey = env.VAPID_PRIVATE_KEY || '';
     this.subject = env.VAPID_SUBJECT || 'mailto:support@applytrack.dev';
 
-    // If keys not set in .env, generate standard cryptographic VAPID keypair automatically
-    if (!this.publicKey || !this.privateKey) {
-      try {
-        const generated = webpush.generateVAPIDKeys();
-        this.publicKey = generated.publicKey;
-        this.privateKey = generated.privateKey;
-        console.log('[WebPush] 🔑 Auto-generated VAPID keys for active instance:');
-        console.log(`[WebPush] Public Key: ${this.publicKey}`);
-      } catch (err) {
-        console.warn('[WebPush] Could not auto-generate VAPID keys:', err);
-      }
-    }
-
+    let keysLoaded = false;
     if (this.publicKey && this.privateKey) {
       try {
         webpush.setVapidDetails(
@@ -45,8 +33,27 @@ export class NotificationsService {
           this.publicKey,
           this.privateKey
         );
+        keysLoaded = true;
       } catch (err) {
-        console.warn('[WebPush] VAPID initialization warning:', err);
+        console.warn('[WebPush] ⚠️ Configured VAPID keys are invalid or mismatched. Falling back to fresh keys.', err);
+      }
+    }
+
+    // If keys not set or invalid, generate standard cryptographic VAPID keypair automatically
+    if (!keysLoaded) {
+      try {
+        const generated = webpush.generateVAPIDKeys();
+        this.publicKey = generated.publicKey;
+        this.privateKey = generated.privateKey;
+        webpush.setVapidDetails(
+          this.subject,
+          this.publicKey,
+          this.privateKey
+        );
+        console.log('[WebPush] 🔑 Fresh valid VAPID keys generated for active session:');
+        console.log(`[WebPush] Public Key: ${this.publicKey}`);
+      } catch (err) {
+        console.error('[WebPush] Could not initialize VAPID details:', err);
       }
     }
   }
@@ -101,9 +108,12 @@ export class NotificationsService {
   /**
    * Dispatches push notification to all active devices/browsers of a specific user
    */
-  public async sendPushToUser(userId: string, payload: PushNotificationPayload): Promise<{ sent: number; failed: number }> {
+  public async sendPushToUser(
+    userId: string,
+    payload: PushNotificationPayload
+  ): Promise<{ sent: number; failed: number; total: number; errorDetails?: string }> {
     if (!this.publicKey || !this.privateKey) {
-      return { sent: 0, failed: 0 };
+      return { sent: 0, failed: 0, total: 0, errorDetails: 'VAPID keys not configured' };
     }
 
     const subscriptions = await prisma.pushSubscription.findMany({
@@ -111,18 +121,19 @@ export class NotificationsService {
     });
 
     if (subscriptions.length === 0) {
-      return { sent: 0, failed: 0 };
+      return { sent: 0, failed: 0, total: 0, errorDetails: 'NO_SUBSCRIPTIONS' };
     }
 
     let sent = 0;
     let failed = 0;
+    let lastError = '';
 
     const notificationString = JSON.stringify({
       title: payload.title,
       body: payload.body,
       url: payload.url || '/',
-      icon: payload.icon || '/icon-192.png',
-      badge: payload.badge || '/icon-192.png',
+      icon: payload.icon || '/icon.svg',
+      badge: payload.badge || '/icon.svg',
       tag: payload.tag || 'applytrack-alert'
     });
 
@@ -137,14 +148,16 @@ export class NotificationsService {
         sent++;
       } catch (err: any) {
         failed++;
+        lastError = err?.message || String(err);
+        console.error(`[WebPush] ❌ Error sending push notification (status ${err?.statusCode}):`, err?.body || err?.message || err);
         // If device token has expired (404/410 Gone), prune from database
-        if (err.statusCode === 404 || err.statusCode === 410) {
+        if (err?.statusCode === 404 || err?.statusCode === 410) {
           await this.removeSubscription(sub.endpoint);
         }
       }
     }
 
-    return { sent, failed };
+    return { sent, failed, total: subscriptions.length, errorDetails: lastError || undefined };
   }
 }
 

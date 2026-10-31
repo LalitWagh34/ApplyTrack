@@ -17,6 +17,7 @@ export interface User {
     portfolioLink?: string;
     topProjects?: string[];
     followUpCadenceDays?: number;
+    notificationsEnabled?: boolean;
   };
 }
 

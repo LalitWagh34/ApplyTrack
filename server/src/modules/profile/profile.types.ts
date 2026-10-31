@@ -9,6 +9,7 @@ export interface UserPreferences {
   portfolioLink?: string;
   topProjects?: string[];
   followUpCadenceDays?: number;
+  notificationsEnabled?: boolean;
 }
 
 export interface ProfileResponse {
@@ -34,4 +35,5 @@ export interface UpdateProfileRequest {
   portfolioLink?: string;
   topProjects?: string[];
   followUpCadenceDays?: number;
+  notificationsEnabled?: boolean;
 }

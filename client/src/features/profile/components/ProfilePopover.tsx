@@ -80,10 +80,22 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
       setTopProjects(Array.isArray(prefs.topProjects) ? prefs.topProjects.join('\n') : '');
       setFollowUpCadence(typeof (prefs as any)?.followUpCadenceDays === 'number' ? (prefs as any).followUpCadenceDays : 7);
 
-      // Check current browser push permission
+      // Check current notification state: user preference and browser permission
+      const userNotificationPref = (prefs as any)?.notificationsEnabled;
       const perm = notificationsApi.getPermission();
-      setIsPushEnabled(perm === 'granted');
-      setPushStatusText(perm === 'granted' ? 'Enabled' : perm === 'denied' ? 'Blocked by Browser' : 'Disabled');
+
+      if (perm === 'denied') {
+        setIsPushEnabled(false);
+        setPushStatusText('Blocked by Browser');
+      } else if (typeof userNotificationPref === 'boolean') {
+        setIsPushEnabled(userNotificationPref);
+        setPushStatusText(userNotificationPref ? 'Enabled' : 'Disabled');
+      } else {
+        notificationsApi.isSubscribed().then((subscribed) => {
+          setIsPushEnabled(subscribed);
+          setPushStatusText(subscribed ? 'Enabled' : 'Disabled');
+        });
+      }
     }
   }, [user, isOpen]);
 
@@ -200,11 +212,15 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
         await notificationsApi.unsubscribe();
         setIsPushEnabled(false);
         setPushStatusText('Disabled');
+        const updated = await profileApi.updateProfile({ notificationsEnabled: false });
+        if (updated) onProfileUpdated(updated);
         setStatusMessage({ type: 'success', text: 'Push notifications disabled.' });
       } else {
         await notificationsApi.subscribe();
         setIsPushEnabled(true);
         setPushStatusText('Enabled');
+        const updated = await profileApi.updateProfile({ notificationsEnabled: true });
+        if (updated) onProfileUpdated(updated);
         setStatusMessage({ type: 'success', text: '🔔 Desktop & Mobile Push Notifications enabled!' });
       }
     } catch (err: any) {
@@ -259,7 +275,8 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
         topSkills,
         portfolioLink,
         topProjects: projectsArr,
-        followUpCadenceDays: followUpCadence
+        followUpCadenceDays: followUpCadence,
+        notificationsEnabled: isPushEnabled
       });
 
       onProfileUpdated(updated);

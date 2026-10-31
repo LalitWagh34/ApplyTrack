@@ -164,7 +164,8 @@ Do not wrap with markdown code blocks or add conversational text. Return only va
       ...(data.topSkills !== undefined && { topSkills: data.topSkills.slice(0, 4) }),
       ...(data.portfolioLink !== undefined && { portfolioLink: data.portfolioLink }),
       ...(data.topProjects !== undefined && { topProjects: data.topProjects.slice(0, 3) }),
-      ...(data.followUpCadenceDays !== undefined && { followUpCadenceDays: data.followUpCadenceDays })
+      ...(data.followUpCadenceDays !== undefined && { followUpCadenceDays: data.followUpCadenceDays }),
+      ...(data.notificationsEnabled !== undefined && { notificationsEnabled: data.notificationsEnabled })
     };
 
     const updatedUser = await prisma.user.update({

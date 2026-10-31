@@ -56,8 +56,13 @@ export class NotificationsController {
     });
 
     if (result.sent === 0) {
+      if (result.errorDetails === 'NO_SUBSCRIPTIONS' || result.total === 0) {
+        return reply.status(400).send(
+          errorResponse('No active push subscriptions found. Please click "Enable" to activate notifications on this browser.')
+        );
+      }
       return reply.status(400).send(
-        errorResponse('No active push subscriptions found. Please enable browser notifications first.')
+        errorResponse(`Push dispatch failed: ${result.errorDetails || 'Push service rejected notification'}. Please toggle notifications Off and On again.`)
       );
     }
 

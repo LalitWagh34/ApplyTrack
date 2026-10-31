@@ -21,6 +21,7 @@ export interface ProfilePreferences {
   portfolioLink?: string;
   topProjects?: string[];
   followUpCadenceDays?: number;
+  notificationsEnabled?: boolean;
 }
 
 export interface UpdateProfilePayload {
@@ -31,6 +32,7 @@ export interface UpdateProfilePayload {
   portfolioLink?: string;
   topProjects?: string[];
   followUpCadenceDays?: number;
+  notificationsEnabled?: boolean;
 }
 
 export const profileApi = {

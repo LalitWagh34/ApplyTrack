@@ -43,6 +43,20 @@ export const notificationsApi = {
   },
 
   /**
+   * Checks if browser currently holds an active push subscription
+   */
+  async isSubscribed(): Promise<boolean> {
+    if (!this.isSupported()) return false;
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const sub = await registration.pushManager.getSubscription();
+      return !!sub;
+    } catch {
+      return false;
+    }
+  },
+
+  /**
    * Fetches public VAPID key from backend
    */
   async getPublicKey(): Promise<string> {
@@ -80,13 +94,20 @@ export const notificationsApi = {
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
 
-    if (!subscription) {
-      const convertedVapidKey = urlBase64ToUint8Array(publicKey);
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: convertedVapidKey as unknown as BufferSource
-      });
+    // If an existing subscription exists, renew it with the current active server key
+    if (subscription) {
+      try {
+        await subscription.unsubscribe();
+      } catch {
+        // Ignored
+      }
     }
+
+    const convertedVapidKey = urlBase64ToUint8Array(publicKey);
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: convertedVapidKey as unknown as BufferSource
+    });
 
     // Save subscription in backend
     const res = await fetch(`${API_BASE}/subscribe`, {
@@ -130,40 +151,51 @@ export const notificationsApi = {
    * Sends an instant test push notification from backend
    */
   async sendTestPush(): Promise<string> {
-    // Ensure permission is granted
+    // Ensure permission is granted & fresh subscription is active
     if (Notification.permission !== 'granted') {
       await this.subscribe();
     }
 
-    const res = await fetch(`${API_BASE}/test`, {
-      method: 'POST',
-      headers: getAuthHeaders()
-    });
-
-    if (!res.ok) {
-      // If server had no active subscription record, subscribe and retry
-      await this.subscribe();
-      const retryRes = await fetch(`${API_BASE}/test`, {
+    try {
+      const res = await fetch(`${API_BASE}/test`, {
         method: 'POST',
         headers: getAuthHeaders()
       });
-      const retryJson = await retryRes.json();
-      if (!retryRes.ok) {
-        // Fallback: show instant native notification if permission granted
-        if (Notification.permission === 'granted') {
-          new Notification('⚡ ApplyTrack Alert: Active!', {
-            body: 'You are ready to receive OA deadlines and interview alerts directly on your device.',
-            icon: '/icon.svg'
-          });
-          return 'Test notification displayed on your device!';
-        }
-        throw new Error(retryJson.message || 'Failed to send test notification');
-      }
-      return retryJson.message || 'Test notification sent to your device!';
-    }
 
-    const json = await res.json();
-    return json.message || 'Test notification sent to your device!';
+      if (!res.ok) {
+        // If server had no active subscription record, refresh subscribe and retry
+        await this.subscribe();
+        const retryRes = await fetch(`${API_BASE}/test`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+        const retryJson = await retryRes.json();
+        if (!retryRes.ok) {
+          // Fallback: show instant native notification if permission granted
+          if (Notification.permission === 'granted') {
+            new Notification('⚡ ApplyTrack Alert: Active!', {
+              body: 'You are ready to receive OA deadlines and interview alerts directly on your device.',
+              icon: '/icon.svg'
+            });
+            return 'Test notification displayed on your device!';
+          }
+          throw new Error(retryJson.message || 'Failed to send test notification');
+        }
+        return retryJson.message || 'Test notification sent to your device!';
+      }
+
+      const json = await res.json();
+      return json.message || 'Test notification sent to your device!';
+    } catch (err: any) {
+      if (Notification.permission === 'granted') {
+        new Notification('⚡ ApplyTrack Alert: Active!', {
+          body: 'You are ready to receive OA deadlines and interview alerts directly on your device.',
+          icon: '/icon.svg'
+        });
+        return 'Test notification displayed on your device!';
+      }
+      throw err;
+    }
   }
 };
 
