@@ -3,6 +3,7 @@
  * Inspired by reference Image 3: Modular card layout for Personal Profile, AI Context, Notifications & CSV Export
  */
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { User } from '../../auth/types/auth.types.js';
 import { profileApi } from '../api/profileApi.js';
 import { notificationsApi } from '../../notifications/api/notificationsApi.js';
@@ -127,9 +128,19 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
         });
       }
     }
-  }, [user, isOpen]);
+  // Lock background body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
 
-  if (!isOpen || !user) return null;
+  if (!user) return null;
+  if (!isOpen && !statusMessage) return null;
 
   // Handle Custom Photo Upload
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -334,35 +345,38 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
   const initial = (fullName || user.email || 'U')[0].toUpperCase();
 
   return (
-    <div
-      className="modal-overlay"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 90,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-        backgroundColor: 'rgba(0, 0, 0, 0.65)',
-        backdropFilter: 'blur(5px)'
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '540px',
-          backgroundColor: 'var(--bg-surface)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '18px',
-          boxShadow: 'var(--shadow-lg)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          maxHeight: '92vh',
-          position: 'relative'
-        }}
-      >
+    <>
+      {isOpen && (
+        <div
+          className="modal-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 90,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(5px)',
+            overscrollBehavior: 'contain'
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '540px',
+              backgroundColor: 'var(--bg-surface)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '18px',
+              boxShadow: 'var(--shadow-lg)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: '92vh',
+              overscrollBehavior: 'contain'
+            }}
+          >
         {/* Header: Title & Close Button (Image 3 Inspiration) */}
         <div
           style={{
@@ -423,7 +437,7 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
         </div>
 
         {/* Scrollable Body Content */}
-        <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '18px', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
           {/* CARD 1: PERSONAL PROFILE (Exact Reference Image 3 Design) */}
           <div
             style={{
@@ -1016,62 +1030,70 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
             <Check size={16} />
             <span>{isSaving ? 'Updating...' : 'Update Profile'}</span>
           </button>
+          </div>
         </div>
+      </div>
+      )}
 
-        {/* Floating Toaster Notification (Auto-dismisses in 5s) */}
-        {statusMessage && (
-          <div
+      {/* Global Floating Toaster (Portal to document.body: Stays visible for 5s even if profile modal is closed!) */}
+      {statusMessage && createPortal(
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            bottom: '28px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 99999,
+            maxWidth: '92vw',
+            width: 'max-content',
+            padding: '11px 18px',
+            borderRadius: '14px',
+            fontSize: '0.84rem',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            backgroundColor: statusMessage.type === 'success' ? '#0b2318' : '#2b0e14',
+            border: `1.5px solid ${statusMessage.type === 'success' ? 'rgba(34, 197, 94, 0.45)' : 'rgba(244, 63, 94, 0.45)'}`,
+            color: statusMessage.type === 'success' ? '#4ade80' : '#fb7185',
+            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.3)',
+            backdropFilter: 'blur(12px)',
+            animation: 'fadeInUp 0.22s ease-out'
+          }}
+        >
+          {statusMessage.type === 'success' ? (
+            <CheckCircle2 size={18} style={{ flexShrink: 0, color: '#22c55e' }} />
+          ) : (
+            <ShieldAlert size={18} style={{ flexShrink: 0, color: '#f43f5e' }} />
+          )}
+          <span style={{ lineHeight: 1.4 }}>{statusMessage.text}</span>
+          <button
+            type="button"
+            onClick={clearStatus}
+            aria-label="Dismiss toast"
+            title="Close (✕)"
             style={{
-              position: 'absolute',
-              bottom: '72px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 120,
-              maxWidth: '90%',
-              width: 'max-content',
-              padding: '10px 16px',
-              borderRadius: '12px',
-              fontSize: '0.82rem',
-              fontWeight: 600,
+              background: 'rgba(255, 255, 255, 0.12)',
+              border: 'none',
+              color: 'currentColor',
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '6px',
+              marginLeft: '6px',
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
-              backgroundColor: statusMessage.type === 'success' ? '#0f291e' : '#2b1117',
-              border: `1px solid ${statusMessage.type === 'success' ? 'rgba(34, 197, 94, 0.4)' : 'rgba(244, 63, 94, 0.4)'}`,
-              color: statusMessage.type === 'success' ? '#4ade80' : '#fb7185',
-              boxShadow: '0 8px 28px rgba(0, 0, 0, 0.45)',
-              backdropFilter: 'blur(10px)',
-              animation: 'fadeInUp 0.22s ease-out'
+              justifyContent: 'center',
+              transition: 'background-color 0.15s ease'
             }}
           >
-            {statusMessage.type === 'success' ? (
-              <CheckCircle2 size={16} style={{ flexShrink: 0, color: '#22c55e' }} />
-            ) : (
-              <ShieldAlert size={16} style={{ flexShrink: 0, color: '#f43f5e' }} />
-            )}
-            <span style={{ lineHeight: 1.4 }}>{statusMessage.text}</span>
-            <button
-              type="button"
-              onClick={clearStatus}
-              aria-label="Dismiss toast"
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'currentColor',
-                cursor: 'pointer',
-                padding: '2px',
-                opacity: 0.7,
-                marginLeft: '6px',
-                display: 'flex',
-                alignItems: 'center'
-              }}
-            >
-              <X size={14} />
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
+            <X size={15} />
+          </button>
+        </div>,
+        document.body
+      )}
+    </>
   );
 };
 
