@@ -299,78 +299,117 @@ export const AddApplicationModal: React.FC<AddApplicationModalProps> = ({
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {/* 1. Company Name & Domain */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-              <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
-                  <Building2 size={13} />
-                  Company Name *
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <CompanyLogo
-                    companyName={companyName || 'Company'}
-                    domain={companyDomain}
-                    size={34}
-                  />
-                  <input
-                    type="text"
-                    required
-                    autoFocus
-                    value={companyName}
-                    onChange={handleCompanyNameChange}
-                    placeholder="e.g. Swiggy, Google"
-                    style={{
-                      flex: 1,
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      border: '1px solid var(--border-color)',
-                      backgroundColor: 'var(--bg-subtle)',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.84rem',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
+            {/* 1. Company Identity (Logo + Name) */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 14px',
+                borderRadius: '10px',
+                backgroundColor: 'var(--bg-subtle)',
+                border: '1px solid var(--border-color)'
+              }}
+            >
+              <div
+                style={{
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <CompanyLogo
+                  companyName={companyName || 'Company'}
+                  domain={companyDomain}
+                  size={42}
+                />
               </div>
 
-              <div>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <label
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    fontSize: '0.78rem',
+                    gap: '5px',
+                    fontSize: '0.74rem',
                     fontWeight: 600,
                     color: 'var(--text-secondary)',
-                    marginBottom: '5px'
+                    marginBottom: '4px'
                   }}
-                  title="Used by ApplyTracker to auto-match incoming test/interview emails"
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Globe size={13} />
-                    Domain
-                  </span>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--accent)', fontWeight: 500 }}>
-                    Auto-sync
-                  </span>
+                  <Building2 size={13} />
+                  Company Name *
                 </label>
                 <input
                   type="text"
-                  value={companyDomain}
-                  onChange={handleDomainChange}
-                  placeholder="e.g. swiggy.com"
+                  required
+                  autoFocus
+                  value={companyName}
+                  onChange={handleCompanyNameChange}
+                  placeholder="e.g. Swiggy, Google, Amazon"
                   style={{
                     width: '100%',
                     padding: '8px 12px',
                     borderRadius: '6px',
                     border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-subtle)',
+                    backgroundColor: 'var(--bg-surface)',
                     color: 'var(--text-primary)',
-                    fontSize: '0.84rem',
+                    fontSize: '0.88rem',
+                    fontWeight: 600,
                     outline: 'none'
                   }}
                 />
               </div>
+            </div>
+
+            {/* 2. Company Domain (Clean, Dedicated Field) */}
+            <div>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  color: 'var(--text-secondary)',
+                  marginBottom: '5px'
+                }}
+                title="Used by ApplyTracker to auto-match incoming test/interview emails"
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Globe size={13} />
+                  Company Domain / Website
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.68rem',
+                    color: 'var(--accent)',
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)'
+                  }}
+                >
+                  ⚡ Auto-matched for Email Sync
+                </span>
+              </label>
+              <input
+                type="text"
+                value={companyDomain}
+                onChange={handleDomainChange}
+                placeholder="e.g. swiggy.com or google.com"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.84rem',
+                  outline: 'none'
+                }}
+              />
             </div>
 
             {/* 2. Role Title */}
