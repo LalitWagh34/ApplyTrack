@@ -16,13 +16,34 @@ export interface PushNotificationPayload {
 }
 
 export class NotificationsService {
+  private publicKey: string = '';
+  private privateKey: string = '';
+  private subject: string = 'mailto:support@applytrack.dev';
+
   constructor() {
-    if (env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY) {
+    this.publicKey = env.VAPID_PUBLIC_KEY || '';
+    this.privateKey = env.VAPID_PRIVATE_KEY || '';
+    this.subject = env.VAPID_SUBJECT || 'mailto:support@applytrack.dev';
+
+    // If keys not set in .env, generate standard cryptographic VAPID keypair automatically
+    if (!this.publicKey || !this.privateKey) {
+      try {
+        const generated = webpush.generateVAPIDKeys();
+        this.publicKey = generated.publicKey;
+        this.privateKey = generated.privateKey;
+        console.log('[WebPush] 🔑 Auto-generated VAPID keys for active instance:');
+        console.log(`[WebPush] Public Key: ${this.publicKey}`);
+      } catch (err) {
+        console.warn('[WebPush] Could not auto-generate VAPID keys:', err);
+      }
+    }
+
+    if (this.publicKey && this.privateKey) {
       try {
         webpush.setVapidDetails(
-          env.VAPID_SUBJECT,
-          env.VAPID_PUBLIC_KEY,
-          env.VAPID_PRIVATE_KEY
+          this.subject,
+          this.publicKey,
+          this.privateKey
         );
       } catch (err) {
         console.warn('[WebPush] VAPID initialization warning:', err);
@@ -34,7 +55,7 @@ export class NotificationsService {
    * Returns the public VAPID key so client browser can subscribe to push manager
    */
   public getPublicKey(): string {
-    return env.VAPID_PUBLIC_KEY || '';
+    return this.publicKey;
   }
 
   /**
@@ -81,7 +102,7 @@ export class NotificationsService {
    * Dispatches push notification to all active devices/browsers of a specific user
    */
   public async sendPushToUser(userId: string, payload: PushNotificationPayload): Promise<{ sent: number; failed: number }> {
-    if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) {
+    if (!this.publicKey || !this.privateKey) {
       return { sent: 0, failed: 0 };
     }
 

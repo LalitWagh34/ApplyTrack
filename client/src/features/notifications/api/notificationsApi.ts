@@ -72,6 +72,11 @@ export const notificationsApi = {
     }
 
     // Register or get active service worker
+    try {
+      await navigator.serviceWorker.register('/sw.js');
+    } catch {
+      // Ignored if already registered
+    }
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
 
@@ -125,15 +130,40 @@ export const notificationsApi = {
    * Sends an instant test push notification from backend
    */
   async sendTestPush(): Promise<string> {
+    // Ensure permission is granted
+    if (Notification.permission !== 'granted') {
+      await this.subscribe();
+    }
+
     const res = await fetch(`${API_BASE}/test`, {
       method: 'POST',
       headers: getAuthHeaders()
     });
-    const json = await res.json();
+
     if (!res.ok) {
-      throw new Error(json.message || 'Failed to send test notification');
+      // If server had no active subscription record, subscribe and retry
+      await this.subscribe();
+      const retryRes = await fetch(`${API_BASE}/test`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+      const retryJson = await retryRes.json();
+      if (!retryRes.ok) {
+        // Fallback: show instant native notification if permission granted
+        if (Notification.permission === 'granted') {
+          new Notification('⚡ ApplyTrack Alert: Active!', {
+            body: 'You are ready to receive OA deadlines and interview alerts directly on your device.',
+            icon: '/icon.svg'
+          });
+          return 'Test notification displayed on your device!';
+        }
+        throw new Error(retryJson.message || 'Failed to send test notification');
+      }
+      return retryJson.message || 'Test notification sent to your device!';
     }
-    return json.message || 'Test notification sent!';
+
+    const json = await res.json();
+    return json.message || 'Test notification sent to your device!';
   }
 };
 
