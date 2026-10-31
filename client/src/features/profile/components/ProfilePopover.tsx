@@ -128,6 +128,8 @@ export const ProfilePopover: React.FC<ProfilePopoverProps> = ({
         });
       }
     }
+  }, [user, isOpen]);
+
   // Lock background body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
