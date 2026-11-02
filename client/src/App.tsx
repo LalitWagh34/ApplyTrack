@@ -136,12 +136,24 @@ export function AppContent() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
+    const authCode = params.get('auth_code');
     const authError = params.get('error');
 
     if (authError) {
       alert(`Authentication Error: ${decodeURIComponent(authError)}`);
       window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (authCode) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      void authApi.exchangeCode(authCode)
+        .then((exchangedToken) => {
+          localStorage.setItem('applytrack_token', exchangedToken);
+          return fetchData();
+        })
+        .catch(() => {
+          alert('Authentication code expired or could not be verified. Please sign in again.');
+        });
     } else if (token) {
+      // Transitional compatibility for callbacks from a previously deployed backend.
       localStorage.setItem('applytrack_token', token);
       window.history.replaceState({}, document.title, window.location.pathname);
       void fetchData();

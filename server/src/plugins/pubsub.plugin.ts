@@ -4,6 +4,7 @@
  */
 import fp from 'fastify-plugin';
 import { FastifyInstance, FastifyRequest } from 'fastify';
+import { timingSafeEqual } from 'node:crypto';
 import { env } from '../config/env.js';
 
 export interface DecodedPubSubMessage<T = unknown> {
@@ -20,21 +21,25 @@ export interface PubSubPluginDecorators {
 }
 
 async function pubSubPlugin(fastify: FastifyInstance): Promise<void> {
+  const tokenMatches = (candidate: string | undefined): boolean => {
+    if (!candidate || !env.GOOGLE_PUBSUB_VERIFICATION_TOKEN) return false;
+    const candidateBuffer = Buffer.from(candidate);
+    const expectedBuffer = Buffer.from(env.GOOGLE_PUBSUB_VERIFICATION_TOKEN);
+    return candidateBuffer.length === expectedBuffer.length && timingSafeEqual(candidateBuffer, expectedBuffer);
+  };
+
   /**
    * Verify that incoming push webhook comes from configured Google Pub/Sub subscription
    */
   const verifyPubSubRequest = (request: FastifyRequest): boolean => {
     if (!env.GOOGLE_PUBSUB_VERIFICATION_TOKEN) {
-      return true; // No verification token enforced in local/development mode
+      return env.NODE_ENV !== 'production';
     }
 
     const tokenFromQuery = (request.query as Record<string, string>)?.token;
     const tokenFromHeader = request.headers['x-goog-subscription-token'] as string | undefined;
 
-    return (
-      tokenFromQuery === env.GOOGLE_PUBSUB_VERIFICATION_TOKEN ||
-      tokenFromHeader === env.GOOGLE_PUBSUB_VERIFICATION_TOKEN
-    );
+    return tokenMatches(tokenFromQuery) || tokenMatches(tokenFromHeader);
   };
 
   /**

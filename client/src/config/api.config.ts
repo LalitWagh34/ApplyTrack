@@ -9,6 +9,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     GOOGLE: `${API_BASE_URL}/auth/google`,
     GITHUB: `${API_BASE_URL}/auth/github`,
+    EXCHANGE: `${API_BASE_URL}/auth/exchange`,
     ME: `${API_BASE_URL}/auth/me`,
     LOGOUT: `${API_BASE_URL}/auth/logout`
   },
@@ -17,4 +18,3 @@ export const API_ENDPOINTS = {
   PROFILE: `${API_BASE_URL}/profile`,
   NOTIFICATIONS: `${API_BASE_URL}/notifications`
 };
-

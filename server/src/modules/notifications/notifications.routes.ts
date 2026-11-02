@@ -19,7 +19,11 @@ export async function notificationRoutes(fastify: FastifyInstance): Promise<void
   fastify.delete('/unsubscribe', notificationsController.unsubscribe.bind(notificationsController));
 
   // Trigger immediate test push notification
-  fastify.post('/test', notificationsController.sendTestPush.bind(notificationsController));
+  fastify.post(
+    '/test',
+    { preHandler: [fastify.rateLimit({ keyPrefix: 'notification-test', max: 10, windowSeconds: 3600 })] },
+    notificationsController.sendTestPush.bind(notificationsController)
+  );
 }
 
 export default notificationRoutes;

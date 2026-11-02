@@ -7,6 +7,10 @@ import { authService } from './auth.service.js';
 import { successResponse, errorResponse } from '../../utils/apiResponse.js';
 import { env } from '../../config/env.js';
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 function buildClientRedirectUrl(pathAndQuery: string): string {
   const base = (env.CLIENT_URL || 'http://localhost:3000')
     .toString()
@@ -21,73 +25,100 @@ export class AuthController {
   /**
    * Redirects to Google OAuth consent screen
    */
-  public async googleRedirect(_request: FastifyRequest, reply: FastifyReply) {
-    const url = authService.getGoogleAuthUrl();
-    return reply.redirect(url);
+  public async googleRedirect(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const state = await authService.createOAuthState(request.server.redis, 'google');
+      return reply.redirect(authService.getGoogleAuthUrl(state));
+    } catch (error) {
+      request.log.error({ err: error }, 'Unable to initialize Google OAuth:');
+      return reply.redirect(buildClientRedirectUrl('/?error=Unable%20to%20start%20secure%20Google%20login'));
+    }
   }
 
   /**
    * Handles Google OAuth callback
    */
-  public async googleCallback(request: FastifyRequest<{ Querystring: { code?: string; error?: string } }>, reply: FastifyReply) {
-    const { code, error } = request.query;
+  public async googleCallback(request: FastifyRequest<{ Querystring: { code?: string; state?: string; error?: string } }>, reply: FastifyReply) {
+    const { code, state, error } = request.query;
 
     if (error || !code) {
       return reply.redirect(buildClientRedirectUrl(`/?error=${encodeURIComponent(error || 'Missing authorization code from Google')}`));
     }
 
     try {
-      const userProfile = await authService.handleGoogleCallback(code);
+      if (!state || !(await authService.consumeOAuthState(request.server.redis, state, 'google'))) {
+        return reply.redirect(buildClientRedirectUrl('/?error=Invalid%20or%20expired%20Google%20login%20state'));
+      }
 
-      // Sign JWT session
-      const token = request.server.jwt.sign({
+      const userProfile = await authService.handleGoogleCallback(code);
+      const exchangeCode = await authService.createAuthExchangeCode(request.server.redis, {
         userId: userProfile.userId,
         email: userProfile.email,
         fullName: userProfile.fullName,
         avatarUrl: userProfile.avatarUrl
       });
 
-      return reply.redirect(buildClientRedirectUrl(`/?token=${encodeURIComponent(token)}`));
-    } catch (err: any) {
-      request.log.error({ err }, 'Google callback error:');
-      return reply.redirect(buildClientRedirectUrl(`/?error=${encodeURIComponent(err.message || 'Failed to authenticate with Google')}`));
+      return reply.redirect(buildClientRedirectUrl(`/?auth_code=${encodeURIComponent(exchangeCode)}`));
+    } catch (error) {
+      request.log.error({ err: error }, 'Google callback error:');
+      return reply.redirect(buildClientRedirectUrl(`/?error=${encodeURIComponent(getErrorMessage(error, 'Failed to authenticate with Google'))}`));
     }
   }
 
   /**
    * Redirects to GitHub OAuth authorization
    */
-  public async githubRedirect(_request: FastifyRequest, reply: FastifyReply) {
-    const url = authService.getGitHubAuthUrl();
-    return reply.redirect(url);
+  public async githubRedirect(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const state = await authService.createOAuthState(request.server.redis, 'github');
+      return reply.redirect(authService.getGitHubAuthUrl(state));
+    } catch (error) {
+      request.log.error({ err: error }, 'Unable to initialize GitHub OAuth:');
+      return reply.redirect(buildClientRedirectUrl('/?error=Unable%20to%20start%20secure%20GitHub%20login'));
+    }
   }
 
   /**
    * Handles GitHub OAuth callback
    */
-  public async githubCallback(request: FastifyRequest<{ Querystring: { code?: string; error?: string } }>, reply: FastifyReply) {
-    const { code, error } = request.query;
+  public async githubCallback(request: FastifyRequest<{ Querystring: { code?: string; state?: string; error?: string } }>, reply: FastifyReply) {
+    const { code, state, error } = request.query;
 
     if (error || !code) {
       return reply.redirect(buildClientRedirectUrl(`/?error=${encodeURIComponent(error || 'Missing authorization code from GitHub')}`));
     }
 
     try {
-      const userProfile = await authService.handleGitHubCallback(code);
+      if (!state || !(await authService.consumeOAuthState(request.server.redis, state, 'github'))) {
+        return reply.redirect(buildClientRedirectUrl('/?error=Invalid%20or%20expired%20GitHub%20login%20state'));
+      }
 
-      // Sign JWT session
-      const token = request.server.jwt.sign({
+      const userProfile = await authService.handleGitHubCallback(code);
+      const exchangeCode = await authService.createAuthExchangeCode(request.server.redis, {
         userId: userProfile.userId,
         email: userProfile.email,
         fullName: userProfile.fullName,
         avatarUrl: userProfile.avatarUrl
       });
 
-      return reply.redirect(buildClientRedirectUrl(`/?token=${encodeURIComponent(token)}`));
-    } catch (err: any) {
-      request.log.error({ err }, 'GitHub callback error:');
-      return reply.redirect(buildClientRedirectUrl(`/?error=${encodeURIComponent(err.message || 'Failed to authenticate with GitHub')}`));
+      return reply.redirect(buildClientRedirectUrl(`/?auth_code=${encodeURIComponent(exchangeCode)}`));
+    } catch (error) {
+      request.log.error({ err: error }, 'GitHub callback error:');
+      return reply.redirect(buildClientRedirectUrl(`/?error=${encodeURIComponent(getErrorMessage(error, 'Failed to authenticate with GitHub'))}`));
     }
+  }
+
+  public async exchangeCode(
+    request: FastifyRequest<{ Body: { code: string } }>,
+    reply: FastifyReply
+  ) {
+    const sessionPayload = await authService.consumeAuthExchangeCode(request.server.redis, request.body.code);
+    if (!sessionPayload) {
+      return reply.status(401).send(errorResponse('Authentication code is invalid or expired'));
+    }
+
+    const token = request.server.jwt.sign(sessionPayload);
+    return reply.send(successResponse({ token }, 'Authentication completed successfully'));
   }
 
   /**

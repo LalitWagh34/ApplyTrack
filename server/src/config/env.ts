@@ -55,6 +55,14 @@ const envSchema = z.object({
   VAPID_PUBLIC_KEY: z.string().optional().default(''),
   VAPID_PRIVATE_KEY: z.string().optional().default(''),
   VAPID_SUBJECT: z.string().default('mailto:lalitwagh2804@gmail.com')
+}).superRefine((value, context) => {
+  if (value.NODE_ENV === 'production' && !value.GOOGLE_PUBSUB_VERIFICATION_TOKEN) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['GOOGLE_PUBSUB_VERIFICATION_TOKEN'],
+      message: 'GOOGLE_PUBSUB_VERIFICATION_TOKEN is required in production'
+    });
+  }
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

@@ -9,6 +9,7 @@ import {
   dismissReminderSchema,
   logSentSchema
 } from './followups.schemas.js';
+import { GenerateDraftRequest } from './followups.types.js';
 
 export async function followUpRoutes(fastify: FastifyInstance): Promise<void> {
   // All follow-up endpoints require valid authentication
@@ -18,7 +19,14 @@ export async function followUpRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get('/pending', followUpsController.getPending.bind(followUpsController));
 
   // Generate tailored email draft
-  fastify.post('/:id/draft', { schema: generateDraftSchema }, followUpsController.generateDraft.bind(followUpsController));
+  fastify.post<{ Params: { id: string }; Body: GenerateDraftRequest }>(
+    '/:id/draft',
+    {
+      schema: generateDraftSchema,
+      preHandler: [fastify.rateLimit({ keyPrefix: 'followup-draft', max: 30, windowSeconds: 3600 })]
+    },
+    followUpsController.generateDraft.bind(followUpsController)
+  );
 
   // Snooze or dismiss follow-up reminder
   fastify.post('/:id/dismiss', { schema: dismissReminderSchema }, followUpsController.dismiss.bind(followUpsController));

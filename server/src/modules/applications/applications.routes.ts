@@ -42,7 +42,11 @@ export async function applicationRoutes(fastify: FastifyInstance): Promise<void>
   fastify.post('/batch-delete', { schema: batchArchiveSchema }, applicationsController.batchArchive.bind(applicationsController));
 
   // On-demand Gmail Sync (Indeed, Naukri, LinkedIn, cold emails)
-  fastify.post('/sync-gmail', applicationsController.syncGmail.bind(applicationsController));
+  fastify.post(
+    '/sync-gmail',
+    { preHandler: [fastify.rateLimit({ keyPrefix: 'gmail-sync', max: 5, windowSeconds: 300 })] },
+    applicationsController.syncGmail.bind(applicationsController)
+  );
 }
 
 export default applicationRoutes;

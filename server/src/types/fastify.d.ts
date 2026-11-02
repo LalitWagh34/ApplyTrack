@@ -6,6 +6,7 @@ import { PrismaClient } from '@prisma/client';
 import Redis from 'ioredis';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { PubSubPluginDecorators } from '../plugins/pubsub.plugin.js';
+import { RateLimitHandler, RateLimitOptions } from '../plugins/rate-limit.plugin.js';
 import { UserSessionPayload } from '../modules/auth/auth.types.js';
 
 declare module 'fastify' {
@@ -13,6 +14,7 @@ declare module 'fastify' {
     prisma: PrismaClient;
     redis: Redis;
     pubsub: PubSubPluginDecorators;
+    rateLimit: (options: RateLimitOptions) => RateLimitHandler;
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }

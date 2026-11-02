@@ -4,9 +4,34 @@
  */
 import { google } from 'googleapis';
 import { prisma } from '@applytrack/database';
+import { createHash, randomBytes } from 'node:crypto';
+import type Redis from 'ioredis';
 import { env } from '../../config/env.js';
 import { cryptoService } from '../../services/crypto.service.js';
-import { OAuthUserProfile } from './auth.types.js';
+import { AuthProvider, OAuthUserProfile, UserSessionPayload } from './auth.types.js';
+
+const OAUTH_STATE_TTL_SECONDS = 10 * 60;
+const AUTH_EXCHANGE_TTL_SECONDS = 60;
+
+function hashSingleUseValue(value: string): string {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+async function consumeRedisValue(redis: Redis, key: string): Promise<string | null> {
+  const result = await redis.eval(
+    "local value = redis.call('GET', KEYS[1]); if value then redis.call('DEL', KEYS[1]); end; return value",
+    1,
+    key
+  );
+
+  return typeof result === 'string' ? result : null;
+}
+
+function isUserSessionPayload(value: unknown): value is UserSessionPayload {
+  if (!value || typeof value !== 'object') return false;
+  const payload = value as Record<string, unknown>;
+  return typeof payload.userId === 'string' && typeof payload.email === 'string';
+}
 
 export class AuthService {
   private getGoogleOAuthClient() {
@@ -20,12 +45,13 @@ export class AuthService {
   /**
    * Generates Google OAuth consent screen URL with offline refresh token access
    */
-  public getGoogleAuthUrl(): string {
+  public getGoogleAuthUrl(state: string): string {
     const oauth2Client = this.getGoogleOAuthClient();
 
     return oauth2Client.generateAuthUrl({
       access_type: 'offline',
       prompt: 'consent',
+      state,
       scope: [
         'openid',
         'https://www.googleapis.com/auth/userinfo.email',
@@ -86,14 +112,58 @@ export class AuthService {
   /**
    * Generates GitHub OAuth authorization URL
    */
-  public getGitHubAuthUrl(): string {
+  public getGitHubAuthUrl(state: string): string {
     const params = new URLSearchParams({
       client_id: env.GITHUB_CLIENT_ID,
       redirect_uri: env.GITHUB_REDIRECT_URI,
-      scope: 'read:user user:email'
+      scope: 'read:user user:email',
+      state
     });
 
     return `https://github.com/login/oauth/authorize?${params.toString()}`;
+  }
+
+  public async createOAuthState(redis: Redis, provider: AuthProvider): Promise<string> {
+    const state = randomBytes(32).toString('base64url');
+    const key = `auth:oauth-state:${hashSingleUseValue(state)}`;
+    const result = await redis.set(key, provider, 'EX', OAUTH_STATE_TTL_SECONDS, 'NX');
+
+    if (result !== 'OK') {
+      throw new Error('Unable to initialize secure OAuth state');
+    }
+
+    return state;
+  }
+
+  public async consumeOAuthState(redis: Redis, state: string, provider: AuthProvider): Promise<boolean> {
+    const key = `auth:oauth-state:${hashSingleUseValue(state)}`;
+    const storedProvider = await consumeRedisValue(redis, key);
+    return storedProvider === provider;
+  }
+
+  public async createAuthExchangeCode(redis: Redis, payload: UserSessionPayload): Promise<string> {
+    const code = randomBytes(32).toString('base64url');
+    const key = `auth:exchange:${hashSingleUseValue(code)}`;
+    const result = await redis.set(key, JSON.stringify(payload), 'EX', AUTH_EXCHANGE_TTL_SECONDS, 'NX');
+
+    if (result !== 'OK') {
+      throw new Error('Unable to initialize secure authentication exchange');
+    }
+
+    return code;
+  }
+
+  public async consumeAuthExchangeCode(redis: Redis, code: string): Promise<UserSessionPayload | null> {
+    const key = `auth:exchange:${hashSingleUseValue(code)}`;
+    const serializedPayload = await consumeRedisValue(redis, key);
+    if (!serializedPayload) return null;
+
+    try {
+      const payload = JSON.parse(serializedPayload) as unknown;
+      return isUserSessionPayload(payload) ? payload : null;
+    } catch {
+      return null;
+    }
   }
 
   /**

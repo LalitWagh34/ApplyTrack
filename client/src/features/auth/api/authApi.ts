@@ -21,6 +21,21 @@ export const authApi = {
     return API_ENDPOINTS.AUTH.GITHUB;
   },
 
+  async exchangeCode(code: string): Promise<string> {
+    const res = await fetch(API_ENDPOINTS.AUTH.EXCHANGE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+    const json = await res.json() as { data?: { token?: string }; message?: string; error?: string };
+
+    if (!res.ok || !json.data?.token) {
+      throw new Error(json.message || json.error || 'Authentication code exchange failed');
+    }
+
+    return json.data.token;
+  },
+
   async getMe(): Promise<User | null> {
     const token = localStorage.getItem('applytrack_token');
     if (!token) {

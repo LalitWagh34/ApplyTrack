@@ -9,6 +9,7 @@ export async function webhookRoutes(fastify: FastifyInstance): Promise<void> {
   // Google Cloud Pub/Sub Push Webhook
   fastify.post(
     '/google-pubsub',
+    { preHandler: [fastify.rateLimit({ keyPrefix: 'pubsub', max: 600, windowSeconds: 60 })] },
     webhooksController.handleGooglePubSub.bind(webhooksController)
   );
 }
