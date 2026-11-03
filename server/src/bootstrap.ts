@@ -5,7 +5,7 @@
 import { FastifyInstance } from 'fastify';
 import { env } from './config/env.js';
 import { buildApp } from './app.js';
-import { allQueues } from './config/bullmq.js';
+import { allQueues, scheduleDailyWatchRenewal } from './config/bullmq.js';
 import { initEmailIngestWorker } from './queues/email-ingest.worker.js';
 import { initWatchRenewalWorker } from './queues/watch-renewal.worker.js';
 import { initFollowUpCronWorker } from './queues/followup-cron.worker.js';
@@ -20,6 +20,14 @@ export async function bootstrap(): Promise<FastifyInstance> {
   const emailWorker = initEmailIngestWorker();
   const watchWorker = initWatchRenewalWorker();
   const followUpWorker = initFollowUpCronWorker();
+
+  // Register the recurring scan without making API startup dependent on Redis availability.
+  try {
+    await scheduleDailyWatchRenewal();
+    app.log.info('Daily Gmail watch-renewal schedule registered.');
+  } catch (error) {
+    app.log.warn({ err: error }, 'Unable to register daily Gmail watch-renewal schedule.');
+  }
 
   try {
     const address = await app.listen({

@@ -7,6 +7,7 @@ import { google, gmail_v1 } from 'googleapis';
 import { prisma, ApplicationStatus } from '@applytrack/database';
 import { env } from '../config/env.js';
 import { cryptoService } from './crypto.service.js';
+import { shouldInitializeGoogleHistoryCursor } from './gmail-watch.utils.js';
 
 export interface ExtractedEmailMetadata {
   messageId: string;
@@ -77,13 +78,27 @@ export class GmailService {
 
     const historyId = String(res.data.historyId || '');
     const expiration = new Date(Number(res.data.expiration || Date.now() + 7 * 24 * 60 * 60 * 1000));
-
-    // Save watch expiration and history pointer in DB
-    await prisma.user.update({
+    const watchState = await prisma.user.findUnique({
       where: { id: userId },
-      data: {
-        googleHistoryId: historyId,
-        googleWatchExpiry: expiration
+      select: { googleHistoryId: true }
+    });
+
+    // Refreshing a watch returns a current historyId. Do not overwrite an existing cursor,
+    // otherwise mailbox deltas received while renewal runs could be skipped.
+    await prisma.$transaction(async (transaction) => {
+      await transaction.user.update({
+        where: { id: userId },
+        data: { googleWatchExpiry: expiration }
+      });
+
+      if (shouldInitializeGoogleHistoryCursor(historyId, watchState?.googleHistoryId ?? null)) {
+        await transaction.user.updateMany({
+          where: {
+            id: userId,
+            googleHistoryId: null
+          },
+          data: { googleHistoryId: historyId }
+        });
       }
     });
 

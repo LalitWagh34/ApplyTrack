@@ -2,15 +2,15 @@
  * Watch Renewal BullMQ Worker
  * Automatically renews Google users.watch() subscriptions before the 7-day expiration deadline
  */
-import { Worker } from 'bullmq';
+import { Job, Worker } from 'bullmq';
 import { prisma } from '@applytrack/database';
-import { QUEUE_NAMES, redisConnectionOptions } from '../config/bullmq.js';
+import { QUEUE_NAMES, redisConnectionOptions, WatchRenewalJobPayload } from '../config/bullmq.js';
 import { gmailService } from '../services/gmail.service.js';
 
 export function initWatchRenewalWorker(): Worker {
-  const worker = new Worker(
+  const worker = new Worker<WatchRenewalJobPayload>(
     QUEUE_NAMES.WATCH_RENEWAL,
-    async () => {
+    async (_job: Job<WatchRenewalJobPayload>) => {
       // Find all users with Google connected whose watch expires in the next 48 hours
       const threshold = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
@@ -27,14 +27,21 @@ export function initWatchRenewalWorker(): Worker {
       });
 
       let renewedCount = 0;
+      let failedCount = 0;
 
       for (const user of usersToRenew) {
         try {
           await gmailService.setupWatch(user.id);
           renewedCount++;
-        } catch {
-          // If token revoked, continue to next user
+      } catch (error) {
+          failedCount++;
+          console.error(`[WatchRenewal] Failed to renew Gmail watch for user ${user.id}:`, error);
         }
+      }
+
+      // Throw after processing every due user so BullMQ retries the idempotent scan.
+      if (failedCount > 0) {
+        throw new Error(`Failed to renew ${failedCount} Gmail watch subscription(s)`);
       }
 
       return { renewedCount };

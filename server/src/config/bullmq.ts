@@ -5,6 +5,12 @@
 import { Queue, QueueOptions } from 'bullmq';
 import { RedisOptions } from 'ioredis';
 import { env } from './env.js';
+import {
+  createWatchRenewalScheduler,
+  scheduleDailyWatchRenewal as scheduleDailyWatchRenewalJob,
+  WatchRenewalJobPayload,
+  WatchRenewalQueueScheduler
+} from '../queues/watch-renewal.schedule.js';
 
 export function getRedisOptions(): RedisOptions {
   if (env.REDIS_URL) {
@@ -75,5 +81,11 @@ export const QUEUE_NAMES = {
 export const gmailIngestQueue = new Queue(QUEUE_NAMES.GMAIL_INGEST, defaultQueueOptions);
 export const followUpQueue = new Queue(QUEUE_NAMES.FOLLOW_UP, defaultQueueOptions);
 export const watchRenewalQueue = new Queue(QUEUE_NAMES.WATCH_RENEWAL, defaultQueueOptions);
+
+export type { WatchRenewalJobPayload, WatchRenewalQueueScheduler };
+
+export async function scheduleDailyWatchRenewal(): Promise<void> {
+  await scheduleDailyWatchRenewalJob(createWatchRenewalScheduler(watchRenewalQueue));
+}
 
 export const allQueues = [gmailIngestQueue, followUpQueue, watchRenewalQueue];

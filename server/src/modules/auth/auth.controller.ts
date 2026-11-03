@@ -6,6 +6,7 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import { authService } from './auth.service.js';
 import { successResponse, errorResponse } from '../../utils/apiResponse.js';
 import { env } from '../../config/env.js';
+import { gmailService } from '../../services/gmail.service.js';
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -51,6 +52,11 @@ export class AuthController {
       }
 
       const userProfile = await authService.handleGoogleCallback(code);
+      void gmailService.setupWatch(userProfile.userId)
+        .then(() => request.log.info({ userId: userProfile.userId }, 'Gmail watch registered after Google OAuth.'))
+        .catch((watchError: unknown) => {
+          request.log.warn({ err: watchError, userId: userProfile.userId }, 'Gmail watch registration failed after Google OAuth.');
+        });
       const exchangeCode = await authService.createAuthExchangeCode(request.server.redis, {
         userId: userProfile.userId,
         email: userProfile.email,
