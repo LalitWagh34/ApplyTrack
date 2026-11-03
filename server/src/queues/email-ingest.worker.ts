@@ -7,10 +7,16 @@ import { Worker, Job } from 'bullmq';
 import { prisma, ApplicationStatus, PriorityLevel } from '@applytrack/database';
 import { QUEUE_NAMES, redisConnectionOptions } from '../config/bullmq.js';
 import { gmailService } from '../services/gmail.service.js';
+import { isUniqueConstraintViolation, shouldAdvanceHistoryCursor } from '../services/gmail-consistency.utils.js';
 
 interface EmailIngestJobPayload {
   emailAddress: string;
   historyId: string;
+}
+
+interface MessageChangeSet {
+  sentMessageIds: string[];
+  inboxMessageIds: string[];
 }
 
 export function initEmailIngestWorker(): Worker {
@@ -36,23 +42,12 @@ export function initEmailIngestWorker(): Worker {
 
       const startHistoryId = user.googleHistoryId || historyId;
 
-      // 2. Fetch mailbox delta since startHistoryId
-      const changes = await gmailService.fetchHistoryChanges(user.id, startHistoryId);
-
-      // 3. Update user's latest historyId pointer
-      if (changes.latestHistoryId && changes.latestHistoryId !== user.googleHistoryId) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { googleHistoryId: changes.latestHistoryId }
-        });
-      }
-
       let newTrackedCount = 0;
       let replyDetectedCount = 0;
 
-      // 4. Process OUTBOUND Sent Messages (Detect Job Applications)
-      for (const messageId of changes.sentMessageIds) {
-        try {
+      const processChanges = async (changes: MessageChangeSet): Promise<void> => {
+        // Process OUTBOUND Sent Messages (Detect Job Applications)
+        for (const messageId of changes.sentMessageIds) {
           const meta = await gmailService.fetchMessageMetadata(user.id, messageId);
           if (!meta) continue;
 
@@ -88,8 +83,9 @@ export function initEmailIngestWorker(): Worker {
             // Auto-create application card
             const initialFollowUp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-            await prisma.application.create({
-              data: {
+            try {
+              await prisma.application.create({
+                data: {
                 userId: user.id,
                 companyName: meta.companyName,
                 companyDomain: meta.companyDomain || null,
@@ -112,19 +108,24 @@ export function initEmailIngestWorker(): Worker {
                     }
                   }
                 }
-              }
-            });
+                }
+              });
+            } catch (error: unknown) {
+              if (!isUniqueConstraintViolation(error)) throw error;
+
+              const concurrentApplication = await prisma.application.findFirst({
+                where: { userId: user.id, gmailThreadId: meta.threadId }
+              });
+              if (!concurrentApplication) throw error;
+              continue;
+            }
 
             newTrackedCount++;
           }
-        } catch {
-          // Continue processing other messages
         }
-      }
 
-      // 5. Process INBOUND Messages (Recruiter Reply & Stage Progression Radar)
-      for (const messageId of changes.inboxMessageIds) {
-        try {
+        // Process INBOUND Messages (Recruiter Reply & Stage Progression Radar)
+        for (const messageId of changes.inboxMessageIds) {
           const meta = await gmailService.fetchMessageMetadata(user.id, messageId);
           if (!meta) continue;
 
@@ -136,9 +137,44 @@ export function initEmailIngestWorker(): Worker {
           if (res.updated) {
             replyDetectedCount++;
           }
-        } catch {
-          // Continue processing other messages
         }
+      };
+
+      // Read and process a delta first. A cursor is never advanced before all
+      // relevant messages have completed successfully.
+      const history = await gmailService.fetchHistoryChanges(user.id, startHistoryId);
+      let latestHistoryId: string;
+
+      if (history.status === 'expired') {
+        // The initial snapshot covers retained mailbox messages. Reading history
+        // from its captured cursor afterwards covers messages arriving while the
+        // snapshot is enumerated and processed.
+        const snapshot = await gmailService.fetchMailboxSnapshot(user.id);
+        await processChanges(snapshot);
+
+        const catchUp = await gmailService.fetchHistoryChanges(user.id, snapshot.historyId);
+        if (catchUp.status === 'expired') {
+          throw new Error('Gmail history expired again during mailbox recovery.');
+        }
+
+        await processChanges(catchUp);
+        latestHistoryId = catchUp.latestHistoryId;
+      } else {
+        await processChanges(history);
+        latestHistoryId = history.latestHistoryId;
+      }
+
+      // Equivalent per-user serialization: only the job that read the current
+      // cursor may move it. Overlapping/out-of-order jobs cannot skip history.
+      if (shouldAdvanceHistoryCursor({
+        storedHistoryId: user.googleHistoryId,
+        startHistoryId,
+        nextHistoryId: latestHistoryId
+      })) {
+        await prisma.user.updateMany({
+          where: { id: user.id, googleHistoryId: user.googleHistoryId },
+          data: { googleHistoryId: latestHistoryId }
+        });
       }
 
       return {

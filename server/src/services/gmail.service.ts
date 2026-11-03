@@ -8,6 +8,7 @@ import { prisma, ApplicationStatus } from '@applytrack/database';
 import { env } from '../config/env.js';
 import { cryptoService } from './crypto.service.js';
 import { shouldInitializeGoogleHistoryCursor } from './gmail-watch.utils.js';
+import { isGmailHistoryExpired } from './gmail-consistency.utils.js';
 
 export interface ExtractedEmailMetadata {
   messageId: string;
@@ -29,6 +30,25 @@ export interface PreparedApplication {
   status: ApplicationStatus;
   gmailThreadId: string | null;
   decryptedCompanyName: string;
+}
+
+export interface GmailHistoryChanges {
+  status: 'available';
+  sentMessageIds: string[];
+  inboxMessageIds: string[];
+  latestHistoryId: string;
+}
+
+export interface GmailHistoryExpired {
+  status: 'expired';
+}
+
+export type GmailHistoryFetchResult = GmailHistoryChanges | GmailHistoryExpired;
+
+export interface GmailMailboxSnapshot {
+  sentMessageIds: string[];
+  inboxMessageIds: string[];
+  historyId: string;
 }
 
 export class GmailService {
@@ -121,49 +141,97 @@ export class GmailService {
   /**
    * Fetches history changes between user's last processed historyId and current historyId
    */
-  public async fetchHistoryChanges(userId: string, startHistoryId: string) {
+  public async fetchHistoryChanges(userId: string, startHistoryId: string): Promise<GmailHistoryFetchResult> {
     const gmail = await this.getAuthenticatedGmailClient(userId);
 
     try {
-      const res = await gmail.users.history.list({
-        userId: 'me',
-        startHistoryId,
-        historyTypes: ['messageAdded']
-      });
-
-      const histories = res.data.history || [];
       const sentMessageIds = new Set<string>();
       const inboxMessageIds = new Set<string>();
+      let pageToken: string | undefined;
+      let latestHistoryId = startHistoryId;
 
-      for (const record of histories) {
-        if (record.messagesAdded) {
-          for (const item of record.messagesAdded) {
-            if (item.message && item.message.id) {
-              const labels = item.message.labelIds || [];
-              if (labels.includes('SENT')) {
-                sentMessageIds.add(item.message.id);
-              }
-              if (labels.includes('INBOX')) {
-                inboxMessageIds.add(item.message.id);
+      do {
+        const res = await gmail.users.history.list({
+          userId: 'me',
+          startHistoryId,
+          historyTypes: ['messageAdded'],
+          pageToken
+        });
+
+        for (const record of res.data.history || []) {
+          if (record.messagesAdded) {
+            for (const item of record.messagesAdded) {
+              if (item.message && item.message.id) {
+                const labels = item.message.labelIds || [];
+                if (labels.includes('SENT')) {
+                  sentMessageIds.add(item.message.id);
+                }
+                if (labels.includes('INBOX')) {
+                  inboxMessageIds.add(item.message.id);
+                }
               }
             }
           }
         }
-      }
+
+        latestHistoryId = String(res.data.historyId || latestHistoryId);
+        pageToken = res.data.nextPageToken || undefined;
+      } while (pageToken);
 
       return {
+        status: 'available',
         sentMessageIds: Array.from(sentMessageIds),
         inboxMessageIds: Array.from(inboxMessageIds),
-        latestHistoryId: String(res.data.historyId || startHistoryId)
+        latestHistoryId
       };
     } catch (err) {
-      // If historyId is too old or expired, fallback to last 5 sent messages
-      return {
-        sentMessageIds: [],
-        inboxMessageIds: [],
-        latestHistoryId: startHistoryId
-      };
+      if (isGmailHistoryExpired(err)) return { status: 'expired' };
+      throw err;
     }
+  }
+
+  /**
+   * Captures a mailbox snapshot after recording a history cursor. The caller
+   * must later read history from this cursor before committing a new cursor,
+   * so messages that arrive during reconciliation are included as well.
+   */
+  public async fetchMailboxSnapshot(userId: string): Promise<GmailMailboxSnapshot> {
+    const gmail = await this.getAuthenticatedGmailClient(userId);
+    const profile = await gmail.users.getProfile({ userId: 'me' });
+    const historyId = String(profile.data.historyId || '');
+
+    if (!historyId) {
+      throw new Error('Gmail did not return a history cursor for recovery.');
+    }
+
+    const listAllMessageIds = async (labelId: 'INBOX' | 'SENT'): Promise<string[]> => {
+      const messageIds = new Set<string>();
+      let pageToken: string | undefined;
+
+      do {
+        const page = await gmail.users.messages.list({
+          userId: 'me',
+          labelIds: [labelId],
+          includeSpamTrash: false,
+          pageToken
+        });
+
+        for (const message of page.data.messages || []) {
+          if (message.id) messageIds.add(message.id);
+        }
+
+        pageToken = page.data.nextPageToken || undefined;
+      } while (pageToken);
+
+      return Array.from(messageIds);
+    };
+
+    const [inboxMessageIds, sentMessageIds] = await Promise.all([
+      listAllMessageIds('INBOX'),
+      listAllMessageIds('SENT')
+    ]);
+
+    return { inboxMessageIds, sentMessageIds, historyId };
   }
 
   /**

@@ -67,7 +67,7 @@ model Application {
   appliedDate      DateTime          @default(now())
   stageDueDate     DateTime?
   
-  gmailThreadId    String?           @unique
+  gmailThreadId    String?
   lastOutboundDate DateTime?
   lastInboundDate  DateTime?
   hasReply         Boolean           @default(false)
@@ -85,6 +85,7 @@ model Application {
 
   @@index([userId, status])
   @@index([userId, nextFollowUpDate])
+  @@unique([userId, gmailThreadId])
   @@index([gmailThreadId])
 }
 
