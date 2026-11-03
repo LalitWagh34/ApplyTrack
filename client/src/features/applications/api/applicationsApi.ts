@@ -119,7 +119,7 @@ export const applicationsApi = {
     return json.data || { count: 0 };
   },
 
-  async syncGmail(): Promise<{ syncedCount: number; message: string }> {
+  async syncGmail(): Promise<{ syncedCount: number; message: string; completedAt: string }> {
     const res = await fetch(`${API_BASE}/sync-gmail`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -129,7 +129,7 @@ export const applicationsApi = {
     if (!res.ok) {
       throw new Error(json.message || json.error || `Server error (${res.status}): Failed to sync Gmail`);
     }
-    return json.data || { syncedCount: 0, message: json.message || 'Sync complete' };
+    return json.data || { syncedCount: 0, message: json.message || 'Sync complete', completedAt: '' };
   }
 };
 

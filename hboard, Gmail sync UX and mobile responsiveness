@@ -1,0 +1,19 @@
+warning: in the working copy of 'client/src/App.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/src/components/Navbar.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/src/features/applications/api/applicationsApi.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/src/features/applications/components/ApplicationsListView.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/src/features/auth/types/auth.types.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'client/src/styles/index.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/modules/applications/applications.controller.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/modules/auth/auth.service.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/services/gmail.service.ts', LF will be replaced by CRLF the next time Git touches it
+ client/src/App.tsx                                 | 42 [32m++++++++++++[m[31m---[m
+ client/src/components/Navbar.tsx                   | 11 [32m++[m[31m--[m
+ .../features/applications/api/applicationsApi.ts   |  4 [32m+[m[31m-[m
+ .../components/ApplicationsListView.tsx            | 63 [32m++++++++++++++++++++++[m
+ client/src/features/auth/types/auth.types.ts       |  1 [32m+[m
+ client/src/styles/index.css                        | 18 [32m++++++[m[31m-[m
+ .../applications/applications.controller.ts        |  7 [32m+[m[31m--[m
+ server/src/modules/auth/auth.service.ts            |  5 [32m+[m[31m-[m
+ server/src/services/gmail.service.ts               | 10 [32m++[m[31m--[m
+ 9 files changed, 138 insertions(+), 23 deletions(-)

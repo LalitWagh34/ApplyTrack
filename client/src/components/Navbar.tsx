@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext.js';
 import { ProfileDropdown } from '../features/profile/components/ProfileDropdown.js';
+import { isGmailWatchActive } from './GmailSyncStatus.js';
 
 interface NavbarProps {
   activeView: ActiveNavView;
@@ -54,6 +55,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const { theme, toggleTheme } = useTheme();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const hasActiveGmailWatch = isGmailWatchActive(user);
+  const needsGmailReconnect = Boolean(user?.hasGoogleLinked && !hasActiveGmailWatch);
 
   const views: Array<{ id: ActiveNavView; label: string; icon: React.ElementType; badge?: number }> = [
     { id: 'board', label: 'Board', icon: Trello },
@@ -219,9 +222,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Sync Gmail Button */}
         <button
-          onClick={user?.hasGoogleLinked ? onSyncGmail : onOpenLogin}
+          onClick={user?.hasGoogleLinked && !needsGmailReconnect ? onSyncGmail : onOpenLogin}
           disabled={isSyncing}
-          title={user?.hasGoogleLinked ? 'Scan Gmail for new applications' : 'Connect Google account'}
+          title={needsGmailReconnect ? 'Reconnect Gmail to restore automatic tracking' : user?.hasGoogleLinked ? 'Scan Gmail for new applications' : 'Connect Google account'}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -242,11 +245,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           <RotateCw
             size={13}
             style={{
-              color: user?.hasGoogleLinked ? 'var(--stage-offer)' : 'var(--text-muted)',
+              color: needsGmailReconnect ? 'var(--stage-oa)' : user?.hasGoogleLinked ? 'var(--stage-offer)' : 'var(--text-muted)',
               animation: isSyncing ? 'spin 1s linear infinite' : 'none'
             }}
           />
-          <span className="desktop-only">{isSyncing ? 'Syncing...' : user?.hasGoogleLinked ? 'Sync Gmail' : 'Connect Gmail'}</span>
+          <span className="desktop-only">{isSyncing ? 'Syncing...' : needsGmailReconnect ? 'Reconnect Gmail' : user?.hasGoogleLinked ? 'Sync Gmail' : 'Connect Gmail'}</span>
           <span className="mobile-only">{isSyncing ? '...' : 'Sync'}</span>
         </button>
 

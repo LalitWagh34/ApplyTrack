@@ -156,12 +156,13 @@ export class ApplicationsController {
       const result = await gmailService.syncMailbox(userId);
       // Invalidate pipeline cache so newly fetched applications show up immediately
       void redisCache.invalidateUserApps(userId);
-      return reply.send(successResponse(result, result.message));
-    } catch (err: any) {
+      return reply.send(successResponse({ ...result, completedAt: new Date().toISOString() }, result.message));
+    } catch (err: unknown) {
       // Release lock early if sync fails immediately
       await redisCache.releaseLock(lockKey);
       request.log.error({ err }, 'Gmail on-demand sync error:');
-      return reply.status(500).send(errorResponse(err.message || 'Failed to sync Gmail'));
+      const message = err instanceof Error ? err.message : 'Failed to sync Gmail';
+      return reply.status(500).send(errorResponse(message));
     }
   }
 }

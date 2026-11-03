@@ -262,6 +262,8 @@ export class AuthService {
         fullName: true,
         avatarUrl: true,
         googleId: true,
+        encryptedGoogleToken: true,
+        googleWatchExpiry: true,
         githubId: true,
         preferences: true,
         createdAt: true
@@ -277,7 +279,8 @@ export class AuthService {
       email: user.email,
       fullName: user.fullName,
       avatarUrl: user.avatarUrl,
-      hasGoogleLinked: Boolean(user.googleId),
+      hasGoogleLinked: Boolean(user.encryptedGoogleToken),
+      googleWatchExpiry: user.googleWatchExpiry,
       hasGithubLinked: Boolean(user.githubId),
       preferences: user.preferences || {},
       createdAt: user.createdAt

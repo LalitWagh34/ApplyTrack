@@ -8,6 +8,7 @@ export interface User {
   fullName?: string | null;
   avatarUrl?: string | null;
   hasGoogleLinked?: boolean;
+  googleWatchExpiry?: string | null;
   hasGithubLinked?: boolean;
   googleId?: string | null;
   githubId?: string | null;

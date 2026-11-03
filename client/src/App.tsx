@@ -8,9 +8,11 @@ import { ThemeProvider } from './context/ThemeContext.js';
 import { Sidebar, ActiveNavView } from './components/Sidebar.js';
 import { Navbar } from './components/Navbar.js';
 import { MobileBottomNav } from './components/MobileBottomNav.js';
+import { GmailSyncStatus } from './components/GmailSyncStatus.js';
 
 import { KanbanBoard } from './features/kanban/components/KanbanBoard.js';
 import { ApplicationsListView } from './features/applications/components/ApplicationsListView.js';
+import { ActionFirstDashboard } from './features/applications/components/ActionFirstDashboard.js';
 import { AnalyticsView } from './features/analytics/components/AnalyticsView.js';
 import { FollowUpRadarView } from './features/followups/components/FollowUpRadarView.js';
 import { FollowUpBanner } from './features/followups/components/FollowUpBanner.js';
@@ -59,23 +61,36 @@ export function AppContent() {
     }
   });
   const [isSyncing, setIsSyncing] = useState(false);
+  const [lastManualSyncAt, setLastManualSyncAt] = useState<string | null>(null);
+  const [gmailSyncError, setGmailSyncError] = useState<string | null>(null);
 
   const handleSyncGmail = async () => {
     setIsSyncing(true);
+    setGmailSyncError(null);
     try {
       const res = await applicationsApi.syncGmail();
       await fetchData();
-      if (res.syncedCount > 0) {
-        alert(res.message);
-      } else {
-        alert(res.message || 'Gmail is up to date.');
+      if (res.completedAt) {
+        setLastManualSyncAt(res.completedAt);
+        if (user) {
+          localStorage.setItem(`applytrack_gmail_manual_sync_${user.id}`, res.completedAt);
+        }
       }
-    } catch {
-      alert('Unable to sync with Gmail right now. Please check connection.');
+    } catch (error: unknown) {
+      setGmailSyncError(error instanceof Error ? error.message : 'Unable to sync Gmail right now.');
     } finally {
       setIsSyncing(false);
     }
   };
+
+  useEffect(() => {
+    if (!user) {
+      setLastManualSyncAt(null);
+      return;
+    }
+
+    setLastManualSyncAt(localStorage.getItem(`applytrack_gmail_manual_sync_${user.id}`));
+  }, [user?.id]);
 
   // Draft Modal state
   const [draftModalData, setDraftModalData] = useState<{
@@ -327,6 +342,14 @@ export function AppContent() {
 
         {/* View Content */}
         <main className="has-mobile-bottom-nav" style={{ flex: 1 }}>
+          <GmailSyncStatus
+            user={user}
+            isSyncing={isSyncing}
+            lastManualSyncAt={lastManualSyncAt}
+            error={gmailSyncError}
+            onConnect={() => setIsLoginModalOpen(true)}
+            onSync={handleSyncGmail}
+          />
           {/* VIEW 1: KANBAN BOARD */}
           {activeView === 'board' && (
             <div>
@@ -372,6 +395,13 @@ export function AppContent() {
                   )}
                 </div>
               </div>
+
+              <ActionFirstDashboard
+                applications={applications}
+                onReviewFollowUps={() => setActiveView('radar')}
+                onOpenPipeline={() => setActiveView('board')}
+                onAddApplication={() => setIsNewModalOpen(true)}
+              />
 
               {/* Overdue Follow-Up Alert Banner */}
               <FollowUpBanner

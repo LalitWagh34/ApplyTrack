@@ -930,7 +930,7 @@ export class GmailService {
 
     if (!user || !user.encryptedGoogleToken) {
       console.log(`[GmailSync] User ${userId} has no encryptedGoogleToken.`);
-      return { syncedCount: 0, message: 'Google account is not connected. Please log in with Google to enable Gmail sync.' };
+      throw new Error('Google account is not connected. Please reconnect Gmail to continue.');
     }
 
     try {
@@ -1134,12 +1134,10 @@ export class GmailService {
         syncedCount,
         message: syncedCount > 0 ? `Successfully synced ${syncedCount} application(s) from Gmail!` : 'Gmail is up to date. No new applications found.'
       };
-    } catch (syncErr: any) {
+    } catch (syncErr: unknown) {
       console.error(`[GmailSync] Error in syncMailbox:`, syncErr);
-      return {
-        syncedCount: 0,
-        message: `Sync failed: ${syncErr.message || 'Gmail API connection error'}`
-      };
+      const message = syncErr instanceof Error ? syncErr.message : 'Gmail API connection error';
+      throw new Error(`Sync failed: ${message}`);
     }
   }
 }

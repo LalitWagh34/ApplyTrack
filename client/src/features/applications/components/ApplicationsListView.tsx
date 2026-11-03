@@ -26,6 +26,7 @@ export const ApplicationsListView: React.FC<ApplicationsListViewProps> = ({
   if (applications.length === 0) {
     return (
       <div
+        className="applications-desktop-table"
         style={{
           padding: '60px 24px',
           textAlign: 'center',
@@ -482,6 +483,68 @@ export const ApplicationsListView: React.FC<ApplicationsListViewProps> = ({
             })}
           </tbody>
         </table>
+      </div>
+
+      <div className="applications-mobile-cards">
+        {applications.map((app) => {
+          const isSelected = selectedIds.has(app.id);
+          const importantDate = app.stageDueDate || app.nextFollowUpDate || app.appliedDate;
+          const importantLabel = app.stageDueDate
+            ? 'Stage due'
+            : app.nextFollowUpDate
+              ? 'Follow-up'
+              : 'Applied';
+
+          return (
+            <article
+              key={app.id}
+              onClick={() => onSelectApplication(app)}
+              style={{
+                padding: '13px',
+                border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-color)'}`,
+                borderRadius: '10px',
+                backgroundColor: isSelected ? 'var(--accent-subtle)' : 'var(--bg-surface)',
+                boxShadow: 'var(--shadow-sm)',
+                cursor: 'pointer'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    aria-label={`Select ${app.companyName}`}
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={() => toggleSelectOne(app.id)}
+                    style={{ width: '16px', height: '16px', accentColor: 'var(--accent)', flexShrink: 0 }}
+                  />
+                  <CompanyLogo companyName={app.companyName} domain={app.companyDomain} size={30} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '0.9rem', fontWeight: 750, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{app.companyName}</div>
+                    <div style={{ marginTop: '2px', color: 'var(--text-secondary)', fontSize: '0.76rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{app.roleTitle}</div>
+                  </div>
+                </div>
+                {getStatusPill(app.status)}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '12px', color: 'var(--text-secondary)', fontSize: '0.74rem' }}>
+                <span>{importantLabel}: {new Date(importantDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                {onArchive && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onArchive(app.id);
+                    }}
+                    aria-label={`Archive ${app.companyName}`}
+                    style={{ border: 'none', background: 'none', color: 'var(--text-muted)', padding: '4px', cursor: 'pointer', display: 'flex' }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            </article>
+          );
+        })}
       </div>
     </div>
   );
