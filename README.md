@@ -1,304 +1,347 @@
 # 🎯 ApplyTrack
 
-> ** Linear-style minimal job application tracker with Zero-Effort Gmail Sync, AI Follow-Up Ghostwriter, and PWA Mobile Share Target.**
+> **Cal AI / Linear-style minimal job application tracker with Zero-Effort Gmail Sync, Groq AI Follow-Up Ghostwriter, and Mobile PWA Share Target.**
 
 [![Live Frontend](https://img.shields.io/badge/Frontend-Vercel-black?style=flat&logo=vercel)](https://apply-track-1h5z.vercel.app/)
 [![Backend API](https://img.shields.io/badge/Backend-Render-46E3B7?style=flat&logo=render&logoColor=white)](https://applytrack-580j.onrender.com/health)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?style=flat&logo=typescript)](https://www.typescriptlang.org/)
 [![Fastify](https://img.shields.io/badge/Fastify-4.x-black?style=flat&logo=fastify)](https://www.fastify.io/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react)](https://react.dev/)
-[![Prisma](https://img.shields.io/badge/Prisma-6.x-2D3748?style=flat&logo=prisma)](https://www.prisma.io/)
+[![Prisma](https://img.shields.io/badge/Prisma-5.x-2D3748?style=flat&logo=prisma)](https://www.prisma.io/)
 [![Neon Database](https://img.shields.io/badge/Postgres-Neon-00E599?style=flat&logo=postgresql&logoColor=white)](https://neon.tech/)
 [![Upstash Redis](https://img.shields.io/badge/Redis-Upstash-00E599?style=flat&logo=redis)](https://upstash.com/)
-[![Groq AI](https://img.shields.io/badge/AI-Groq%20Llama%203.3-F55036?style=flat)](https://groq.com/)
+[![Groq AI](https://img.shields.io/badge/AI-Groq%20Llama%203.3%2070B-F55036?style=flat)](https://groq.com/)
 
 ---
 
-## 🌐 Live Production Links
+## 🌐 Live Production Deployments
 
-| Service | Platform | URL | Status |
+| Service | Platform | URL | Health / Verification |
 | :--- | :--- | :--- | :--- |
-| **Frontend PWA** | Vercel | [https://apply-track-1h5z.vercel.app](https://apply-track-1h5z.vercel.app) | ![Status](https://img.shields.io/badge/Live-Vercel-success) |
-| **Backend REST API** | Render | [https://applytrack-580j.onrender.com](https://applytrack-580j.onrender.com) | ![Status](https://img.shields.io/badge/Live-Render-success) |
-| **API Health Check** | Render | [https://applytrack-580j.onrender.com/health](https://applytrack-580j.onrender.com/health) | `{"status":"ok"}` |
+| **Frontend PWA** | Vercel | [https://apply-track-1h5z.vercel.app](https://apply-track-1h5z.vercel.app) | ![Status](https://img.shields.io/badge/Status-Live-success) |
+| **Backend REST API** | Render | [https://applytrack-580j.onrender.com](https://applytrack-580j.onrender.com) | ![Status](https://img.shields.io/badge/Status-Live-success) |
+| **API Health Check** | Render | [https://applytrack-580j.onrender.com/health](https://applytrack-580j.onrender.com/health) | `{"status":"ok", "dependencies":{"database":"connected","redis":"connected"}}` |
+| **Pub/Sub Push Webhook** | Google Cloud | `POST /api/v1/webhooks/google-pubsub?token=<TOKEN>` | HMAC Timing-Safe Verification |
 
 ---
 
 ## ⚡ The Problem & The Solution
 
-### The Pain Point
-Job seekers apply to 30–50+ roles across LinkedIn, careers pages, and cold emails.
-- **90% of cold emails die** because candidates forget to follow up on time.
-- **Manual spreadsheets are boring** and get abandoned within days.
-- **Tracking on mobile is broken**: Chrome extensions do not work when you send emails from the Gmail mobile app.
+### The Core Pain Point
+Job applicants send 30–50+ cold emails and portal applications across LinkedIn, Internshala, and career boards:
+* **90% of cold applications die** because applicants forget to follow up at the right cadence.
+* **Manual spreadsheet tracking is tedious**, requiring copy-pasting links, dates, and statuses.
+* **Mobile email tracking is broken**: Chrome extensions are useless when sending cold emails from the Gmail mobile app on iOS or Android.
 
 ### The ApplyTrack Way (Zero Manual Effort)
-1. **Gmail Auto-Sync (Killer Feature):** Connect Gmail once. When you send a cold application from your phone or desktop, ApplyTrack detects it in real-time via Google Cloud Pub/Sub and prompts: *"Track email to Swiggy?"* — 1 tap to track.
-2. **Linear-Inspired Kanban Board:** Minimal, keyboard-first, distraction-free board (`Applied` ➔ `Screening` ➔ `OA / Technical` ➔ `Interview` ➔ `Offer` / `Rejected`).
-3. **AI Follow-Up Ghostwriter:** Powered by **Groq Llama 3.3 70B**. Automatically monitors threads. If no reply arrives by Day 4, Day 8, or Day 14, it generates a hyper-personalized follow-up draft citing your real projects and skills.
-4. **Resume AI Context Vault:** 1-click in-memory PDF parsing (`pdf-parse`). Extracts your target role, top skills, and portfolio projects into AI context — with **Zero Permanent File Storage** for maximum privacy.
-5. **Mobile-First PWA & Share Target:** Installable on Android & iOS. Direct **Android Web Share Target** integration lets you share job links directly from LinkedIn or Chrome into ApplyTrack.
+1. **Gmail Auto-Sync (Killer Feature):** Connect Gmail once via OAuth. Whenever you send a job application from your desktop or phone Gmail app, ApplyTrack auto-detects it via Google Cloud Pub/Sub and tracks it seamlessly in the background.
+2. **Strict Privacy (`gmail.metadata`):** Operates under restricted Google API scopes. **Zero email body text is ever read, transferred, or stored.** Only metadata (sender domain, subject, timestamp, thread ID) is processed.
+3. **Linear-Inspired Kanban Board:** Keyboard-friendly, high-contrast dark aesthetic (`Applied` ➔ `OA / Assessment` ➔ `Interview` ➔ `Offer` / `Rejected` / `Ghosted`).
+4. **AI Follow-Up Ghostwriter:** Powered by **Groq Llama 3.3 70B**. Monitors threads for replies. If no response arrives by Day 4, Day 8, or Day 14, it drafts tailored in-thread follow-up emails referencing your real projects.
+5. **In-Memory Resume AI Context Vault:** Upload a PDF resume to extract target roles, skills, and project summaries via in-memory parsing (`pdf-parse`) and Groq AI structuring — with **zero permanent document storage**.
+6. **Mobile PWA & Android Web Share Target:** Installable on Android & iOS. Direct Android Share Sheet integration allows 1-tap card creation directly from LinkedIn or Chrome into ApplyTrack.
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ High-Level System Architecture
 
 ```mermaid
 flowchart TB
     subgraph ClientTier["Client Tier (Frontend)"]
-        SPA["React SPA (TypeScript + Vite)"]
-        PWA["PWA Service Worker + Push Receiver"]
+        SPA["React 18 SPA (TypeScript + Vite)"]
+        PWA["PWA Service Worker + Push Client"]
         ShareTarget["Android Web Share Target"]
     end
 
-    subgraph IngestionGateway["API & Ingestion Gateway (Render)"]
+    subgraph IngressTier["API Gateway & Webhooks (Render)"]
         FastifyServer["Fastify REST Server"]
-        JWTSentry["JWT Sentry Guard"]
-        PubSubWebhook["Google Cloud Pub/Sub Webhook"]
+        JWTSentry["JWT Authentication Sentry"]
+        PubSubWebhook["Google Cloud Pub/Sub Webhook (/api/v1/webhooks/google-pubsub)"]
     end
 
-    subgraph AsyncTier["Async Queue Workers (BullMQ)"]
-        IngestQ["Queue: Email Ingestion & Noise Filtering"]
-        WatchQ["Queue: Gmail Watch Renewal Worker"]
-        CronQ["Queue: Follow-up & Radar Worker"]
+    subgraph AsyncTier["Background Worker Pool (BullMQ)"]
+        IngestQ["Queue: Email Ingest & Noise Filter"]
+        WatchQ["Queue: Daily Gmail Watch Renewal"]
+        CronQ["Queue: Follow-up & Deadline Radar"]
     end
 
-    subgraph PersistenceTier["Persistence & Cache"]
-        Postgres[(Neon PostgreSQL - Prisma ORM)]
-        RedisCache[(Upstash Serverless Redis)]
+    subgraph StorageTier["Persistence & Caching"]
+        Postgres[(PostgreSQL - Neon Serverless)]
+        RedisCache[(Redis - Upstash Serverless)]
     end
 
-    subgraph ExternalEcosystem["External Services"]
-        GooglePubSub["Google Cloud Pub/Sub"]
-        GmailAPI["Gmail API (metadata / users.watch)"]
+    subgraph CloudEcosystem["External Services"]
+        GooglePubSub["Google Cloud Pub/Sub (Push)"]
+        GmailAPI["Gmail API (users.watch & metadata)"]
         GroqAI["Groq AI (Llama 3.3 70B Versatile)"]
+        WebPush["Web Push (VAPID Service)"]
     end
 
-    %% Client Communication
-    SPA <-->|REST API + JWT| FastifyServer
-    PWA <-->|Push Subscriptions| FastifyServer
+    %% Client Traffic
+    SPA <-->|REST API + Bearer JWT| FastifyServer
+    PWA <-->|Web Push Subscriptions| FastifyServer
     ShareTarget --> SPA
 
-    %% Ingestion Flow
+    %% Ingestion Traffic
     GmailAPI -->|Mailbox Delta Notification| GooglePubSub
-    GooglePubSub -->|Push Webhook| PubSubWebhook
-    PubSubWebhook --> FastifyServer
+    GooglePubSub -->|Push HTTP POST with Token| PubSubWebhook
+    PubSubWebhook -->|Verify & Deduplicate| FastifyServer
 
-    %% Server to Async & Cache
-    FastifyServer -->|Dispatch Ingest Job| IngestQ
+    %% Async Dispatch
+    FastifyServer --> IngestQ
     FastifyServer <--> RedisCache
     FastifyServer <--> Postgres
     FastifyServer <--> GroqAI
 
-    %% Workers
-    IngestQ --> IngestionGateway
+    %% Worker Operations
+    IngestQ --> FastifyServer
     WatchQ --> GmailAPI
-    CronQ --> GroqAI
+    CronQ --> WebPush
 ```
 
 ---
 
-## 🚀 Key Feature Pillars
+## 🛠️ Tech Stack & Infrastructure
 
-### 1. 📬 Zero-Manual Gmail Sync
-- Listens to mailbox events via Gmail `users.watch()` and Google Cloud Pub/Sub.
-- Built-in **Domain Filter & Noise Blocker**: Ignores GitHub, Google, LinkedIn notifications, promotions, and newsletter noise.
-- **Privacy-First**: Uses restricted `gmail.metadata` scope. **Never stores your email body text** — only thread IDs, timestamps, company names, and status updates.
-
-### 2. 📋 Minimalist Kanban Board
-- Cal AI / Linear dark aesthetics with subtle micro-animations.
-- Drag-and-drop state transitions with optimistic updates.
-- Quick filters, global search (`Ctrl + K`), and job stage metrics (Total, Active, Response Rate).
-
-### 3. ✍️ AI Follow-Up Ghostwriter
-- Multi-tier intelligent cadences:
-  - **Day 4:** Gentle 3-sentence bump.
-  - **Day 8:** Value-add project highlight.
-  - **Day 14:** Polite closure / break-up email.
-- Pulls live candidate skills & recent projects from the Profile Context Vault.
-- 1-click in-thread drafting directly in Gmail.
-
-### 4. 📄 In-Memory Resume Vault
-- Upload your PDF resume once.
-- Parsed completely in-memory using `pdf-parse` + Groq AI structuring.
-- Automatically extracts Target Role, Top 4 Skills, Portfolio Link, and Project Summaries.
-- **Zero permanent disk storage** to prevent document leaks.
-
-### 5. 📱 Installable PWA & Share Target
-- Works offline with service worker caching.
-- Add to Home Screen on iOS & Android.
-- Native Android Share Sheet target: Browse LinkedIn ➔ Tap "Share" ➔ Select "ApplyTrack" ➔ Job details automatically populated.
+| Layer | Technology | Key Capabilities |
+| :--- | :--- | :--- |
+| **Frontend** | React 18, TypeScript, Vite | Zero bulky UI frameworks, custom Linear-style CSS design tokens, Lucide icons |
+| **Mobile & PWA** | Web App Manifest, Service Worker | Offline caching, installable home screen icon, Android Web Share Target API |
+| **Backend API** | Fastify 4, Node.js 24 | High throughput, modular plugins, strict Zod schema validation, Helmet security |
+| **Database** | PostgreSQL (Neon Serverless) | Prisma 5 ORM, soft-delete pattern (`isArchived`), foreign key cascade protection |
+| **Queue & Cache** | BullMQ 5 + Upstash Redis | Message deduplication (SETNX), 60s mutex locks, cron jobs, async mailbox delta ingest |
+| **AI Ghostwriter** | Groq SDK (`llama-3.3-70b-versatile`) | Ultra-fast inference (<500ms) for resume parsing & follow-up draft generation |
+| **Security** | Node Crypto (AES-256-GCM) | User OAuth refresh tokens and applicant company notes encrypted at rest |
+| **Notifications** | Web Push (VAPID) | Cross-platform actionable browser push notifications without proprietary SDKs |
 
 ---
 
-## 🛠️ Tech Stack Breakdown
+## 📁 Repository Structure (Monorepo)
 
-### Frontend (`client/`)
-- **Framework:** React 18 with TypeScript & Vite
-- **Styling:** Custom Vanilla CSS Design System (Linear dark mode, zero bulky CSS frameworks)
-- **Icons:** Lucide React
-- **PWA:** Service Worker (`sw.js`), Web App Manifest (`manifest.json`), Android Share Target API
-- **Deployment:** Vercel SPA (`client/vercel.json`)
-
-### Backend (`server/`)
-- **Runtime & Framework:** Node.js 24 + Fastify (high-throughput, ultra-low overhead)
-- **Validation:** Zod (fail-fast environment and payload validation)
-- **Background Jobs:** BullMQ + Upstash Redis
-- **Security:** AES-256-GCM token encryption for OAuth refresh tokens, Fastify JWT session management
-- **AI Engine:** Groq SDK (`llama-3.3-70b-versatile`)
-- **Deployment:** Render Web Service (`render.yaml`)
-
-### Database (`packages/database/`)
-- **Engine:** PostgreSQL (Neon Serverless)
-- **ORM:** Prisma 6 with strict TypeScript client generation
-- **Data Integrity:** Strict soft-delete architecture (`isArchived`), foreign key cascade protection
-
----
-
-## 📁 Repository Structure
-
-```
+```text
 ApplyTrack/
-├── client/                     # Frontend React SPA & PWA
-│   ├── public/                 # Icons, manifest.json, sw.js
+├── client/                              # Frontend React SPA & PWA
+│   ├── public/                          # Web app manifest, service worker, icons
 │   ├── src/
-│   │   ├── components/         # Navbar, Sidebar, MobileBottomNav
+│   │   ├── components/                  # Navbar, Sidebar, MobileBottomNav, Modal
 │   │   ├── features/
-│   │   │   ├── applications/   # Kanban Board, List View, Add Modal
-│   │   │   ├── auth/           # LoginModal, OAuth hooks, Token Vault
-│   │   │   ├── followups/      # AI Ghostwriter cards, Cadence tracker
-│   │   │   └── profile/        # Resume Parser Popover & Context Vault
-│   │   ├── styles/             # Global Linear-inspired Design System
-│   │   └── config/             # Dynamic API base URL resolution
-│   └── vercel.json             # Vercel SPA routing & PWA headers
+│   │   │   ├── applications/            # Kanban board, List view, Filters, Metrics
+│   │   │   ├── auth/                    # OAuth modal, AuthProvider context, Session hooks
+│   │   │   ├── followups/               # AI Ghostwriter cards, Cadence tracker
+│   │   │   └── profile/                 # Resume Parser & Profile Context Vault
+│   │   ├── styles/                      # Linear dark design system tokens & animations
+│   │   └── config/                      # Dynamic API base URL & environment resolution
+│   └── vercel.json                      # Vercel SPA routing & security headers
 │
-├── server/                     # Backend Fastify API & Workers
+├── server/                              # Backend Fastify API & Workers
 │   ├── src/
+│   │   ├── config/                      # Zod environment schema, BullMQ queue definitions
 │   │   ├── modules/
-│   │   │   ├── applications/   # Job CRUD & status pipeline
-│   │   │   ├── auth/           # Google & GitHub OAuth controllers
-│   │   │   ├── followups/      # Groq AI generation & cadence engine
-│   │   │   └── profile/        # In-memory PDF parser & context API
-│   │   ├── queues/             # BullMQ background workers
-│   │   ├── services/           # Gmail API & Web Push services
-│   │   ├── plugins/            # JWT, Prisma, CORS plugins
-│   │   └── config/             # Zod environment schema & sanitization
-│   └── Dockerfile              # Container definition for server
+│   │   │   ├── applications/            # Kanban CRUD, status transitions, /sync-gmail
+│   │   │   ├── auth/                    # Google & GitHub OAuth exchange & session
+│   │   │   ├── followups/               # Groq AI draft generation & reminder engine
+│   │   │   ├── notifications/           # VAPID key delivery & push subscriptions
+│   │   │   ├── profile/                 # In-memory PDF parser & context management
+│   │   │   └── webhooks/                # Google Cloud Pub/Sub push receiver & validator
+│   │   ├── plugins/                     # Fastify plugins (JWT, Redis, Prisma, PubSub, Rate-limit)
+│   │   ├── queues/                      # BullMQ background workers (email, watch, follow-up)
+│   │   ├── services/                    # Gmail API client, Crypto vault, AI Ghostwriter
+│   │   ├── bootstrap.ts                 # Lifecycle initializer & graceful shutdown
+│   │   └── server.ts                    # Entrypoint runner
+│   └── Dockerfile                       # Multi-stage container definition
 │
 ├── packages/
-│   └── database/               # Shared Prisma Schema & Client
+│   └── database/                        # Shared Database Workspace (@applytrack/database)
 │       └── prisma/
-│           └── schema.prisma   # PostgreSQL Schema (User, Job, Followup)
+│           ├── schema.prisma            # PostgreSQL models, indexes & enums
+│           └── migrations/              # Version-controlled migration history
 │
-├── render.yaml                 # Render Blueprint for zero-downtime deploy
-├── ARCHITECTURE.md             # Detailed engineering design specs
-└── README.md                   # Project documentation
+├── render.yaml                          # Render Blueprint for automated zero-downtime deployment
+├── ARCHITECTURE.md                      # Detailed technical engineering specifications
+├── Techstack.md                         # Architecture and technology matrix
+└── README.md                            # Project documentation
+```
+
+---
+
+## 📡 Complete REST API Reference
+
+All protected endpoints require authorization header: `Authorization: Bearer <JWT_TOKEN>`.
+
+### 1. Authentication (`/api/v1/auth`)
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/google` | Public | Initiates Google OAuth consent flow (`access_type: offline`) |
+| `GET` | `/google/callback` | Public | Google OAuth redirect receiver, issues short-lived exchange code |
+| `GET` | `/github` | Public | Initiates GitHub OAuth flow |
+| `GET` | `/github/callback` | Public | GitHub OAuth redirect receiver |
+| `POST` | `/exchange` | Public | Exchanges single-use auth code for standard Bearer JWT token |
+| `GET` | `/me` | Bearer JWT | Returns current authenticated user profile and connected providers |
+| `POST` | `/logout` | Bearer JWT | Invalidates client session |
+
+### 2. Applications & Kanban (`/api/v1/applications`)
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/` | Bearer JWT | Lists active job applications with optional status/search filters |
+| `GET` | `/metrics` | Bearer JWT | Returns aggregate stage counts (Total, Active, Response Rate) |
+| `GET` | `/:id` | Bearer JWT | Returns detailed application record with full timeline audit log |
+| `POST` | `/` | Bearer JWT | Creates new manual application record with 7-day initial follow-up |
+| `PATCH`| `/:id/status` | Bearer JWT | Updates Kanban stage status with timeline history event |
+| `PATCH`| `/:id` | Bearer JWT | Updates application metadata (company, role, salary, notes) |
+| `DELETE`| `/:id` | Bearer JWT | Soft-deletes application card (`isArchived = true`) |
+| `POST` | `/batch-delete` | Bearer JWT | Soft-deletes multiple applications simultaneously |
+| `POST` | `/sync-gmail` | Bearer JWT | On-demand Gmail scan (protected with 60-second Redis Mutex lock) |
+
+### 3. Webhooks (`/api/v1/webhooks`)
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/google-pubsub` | Query / Header Token | Receives push events from Google Pub/Sub topic for mailbox updates |
+
+> **Webhook Push URL Pattern:**  
+> `https://<YOUR_API_HOST>/api/v1/webhooks/google-pubsub?token=<GOOGLE_PUBSUB_VERIFICATION_TOKEN>`
+
+### 4. AI Follow-Up Radar (`/api/v1/followups`)
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/pending` | Bearer JWT | Returns all dormant applications requiring follow-up action |
+| `POST` | `/:id/draft` | Bearer JWT | Generates Groq Llama 3.3 in-thread follow-up draft (Day 4/8/14) |
+| `POST` | `/:id/dismiss` | Bearer JWT | Snoozes or dismisses current follow-up reminder |
+| `POST` | `/:id/sent` | Bearer JWT | Logs follow-up attempt, schedules next nudge, and updates cadence count |
+
+### 5. Profile & Resume AI Context (`/api/v1/profile`)
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/` | Bearer JWT | Returns AI user preferences, target roles, top skills, and portfolio projects |
+| `PUT` | `/` | Bearer JWT | Updates profile context and AI configuration |
+| `POST` | `/resume` | Bearer JWT | Streams PDF base64, parses in-memory (`pdf-parse`), and extracts AI context via Groq |
+
+### 6. Notifications (`/api/v1/notifications`)
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/vapid-key` | Bearer JWT | Delivers public VAPID key to browser service worker |
+| `POST` | `/subscribe` | Bearer JWT | Registers Web Push subscription endpoint & client keys |
+| `DELETE`| `/unsubscribe`| Bearer JWT | Deletes browser push subscription |
+| `POST` | `/test` | Bearer JWT | Dispatches immediate test push ping to verify device notification support |
+
+---
+
+## ⚙️ Environment Variables Matrix
+
+Create `.env` in `server/` by copying `server/.env.example`:
+
+| Variable | Required | Description | Example Format |
+| :--- | :---: | :--- | :--- |
+| `PORT` | Optional | Server port (defaults to 4000) | `4000` |
+| `NODE_ENV` | Yes | Runtime environment (`development`, `production`, `test`) | `production` |
+| `CLIENT_URL` | Yes | Frontend application origin for CORS & OAuth redirects | `https://apply-track-1h5z.vercel.app` |
+| `DATABASE_URL` | Yes | PostgreSQL connection URI (Neon Serverless with SSL) | `postgresql://user:pass@host/db?sslmode=require` |
+| `REDIS_URL` | Yes | Redis connection string (Upstash over rediss://) | `rediss://default:token@host:6379` |
+| `JWT_SECRET` | Yes | Minimum 32-character secret for signing JWT bearer tokens | `c63fae6750c53234c2529ba5fa2abf8f...` |
+| `TOKEN_ENCRYPTION_KEY` | Yes | 64-character hex string (32 bytes) for AES-256-GCM cipher | `cb929623c9f46a6505f5eecded14c479...` |
+| `GOOGLE_CLIENT_ID` | Yes | Google Cloud OAuth 2.0 Web Client ID | `123456789-abc.apps.googleusercontent.com` |
+| `GOOGLE_CLIENT_SECRET` | Yes | Google Cloud OAuth 2.0 Client Secret | `GOCSPX-xxxxxxxxxxxxxxxx` |
+| `GOOGLE_REDIRECT_URI` | Yes | OAuth callback endpoint on the server | `https://applytrack-580j.onrender.com/api/v1/auth/google/callback` |
+| `GOOGLE_PUBSUB_TOPIC` | Yes | Google Cloud Pub/Sub Topic Resource Path | `projects/<project-id>/topics/gmail-notifications` |
+| `GOOGLE_PUBSUB_VERIFICATION_TOKEN` | Yes | Secret query token verifying inbound Pub/Sub webhooks | `custom-secure-pubsub-webhook-token` |
+| `GITHUB_CLIENT_ID` | Optional | GitHub OAuth App Client ID | `Iv1.xxxxxxxxxxxx` |
+| `GITHUB_CLIENT_SECRET`| Optional | GitHub OAuth App Client Secret | `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
+| `GITHUB_REDIRECT_URI` | Optional | GitHub OAuth callback endpoint | `https://applytrack-580j.onrender.com/api/v1/auth/github/callback` |
+| `GROQ_API_KEY` | Yes | Groq Cloud API key for Llama 3.3 70B inference | `gsk_xxxxxxxxxxxxxxxxxxxxxxxx` |
+| `GROQ_MODEL` | Optional | Groq model tag (defaults to `llama-3.3-70b-versatile`) | `llama-3.3-70b-versatile` |
+| `VAPID_PUBLIC_KEY` | Optional | Public VAPID key for Web Push notifications | Base64 URL-encoded key |
+| `VAPID_PRIVATE_KEY`| Optional | Private VAPID key for Web Push signing | Base64 URL-encoded key |
+| `VAPID_SUBJECT` | Optional | Mailto link identifying sender in Web Push headers | `mailto:support@applytrack.dev` |
+
+In `client/.env`:
+```env
+VITE_BACKEND_URL=https://applytrack-580j.onrender.com/api/v1
 ```
 
 ---
 
 ## 💻 Local Development Setup
 
-### Prerequisites
-- **Node.js:** `v20.x` or `v24.x`
-- **npm:** `v10.x`+
-- **PostgreSQL Database:** Local Postgres or Neon DB URL
-- **Redis:** Local Redis or Upstash Redis instance
+### 1. Prerequisites
+* **Node.js:** `v20.x` or `v24.x`
+* **npm:** `v10.x`+
+* **PostgreSQL:** Local PostgreSQL or free [Neon DB](https://neon.tech/)
+* **Redis:** Local Redis or free [Upstash Redis](https://upstash.com/)
 
-### 1. Clone & Install Dependencies
+### 2. Installation
 ```bash
 git clone https://github.com/LalitWagh34/ApplyTrack.git
 cd ApplyTrack
 npm install
 ```
 
-### 2. Configure Environment Variables
-Copy `.env.example` in `server/` to `.env`:
+### 3. Generate Encryption Keys
+Generate your 32-byte encryption key for `TOKEN_ENCRYPTION_KEY`:
 ```bash
-cp server/.env.example server/.env
-```
-Fill in the required variables:
-```env
-PORT=4000
-NODE_ENV=development
-CLIENT_URL=http://localhost:3000
-
-# PostgreSQL (Neon)
-DATABASE_URL="postgresql://user:password@host/neondb?sslmode=require"
-
-# Redis (Upstash)
-REDIS_URL="rediss://default:password@host:6379"
-
-# Security Keys
-JWT_SECRET="your-32-char-random-jwt-secret-key"
-TOKEN_ENCRYPTION_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-
-# Google OAuth
-GOOGLE_CLIENT_ID="your-google-client-id"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
-GOOGLE_REDIRECT_URI="http://localhost:4000/api/v1/auth/google/callback"
-
-# Groq AI
-GROQ_API_KEY="gsk_your_groq_api_key"
-GROQ_MODEL="llama-3.3-70b-versatile"
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-In `client/` create `.env`:
-```env
-VITE_BACKEND_URL=http://localhost:4000/api/v1
-```
-
-### 3. Database Migration
+### 4. Database Setup & Migration
 ```bash
-npm run generate --workspace=@applytrack/database
-npm run migrate --workspace=@applytrack/database
+# Generate Prisma Client types
+npm run db:generate
+
+# Apply migrations locally
+npm run db:migrate
 ```
 
-### 4. Run Both Client & Server
+### 5. Run Development Servers
 ```bash
-# Start backend server (port 4000)
-npm run dev --workspace=applytrack-server
+# Terminal 1: Backend API (runs on port 4000)
+npm run dev:server
 
-# In a separate terminal, start frontend (port 3000)
-npm run dev --workspace=applytrack-client
+# Terminal 2: Frontend Client (runs on port 3000)
+npm run dev:client
 ```
-
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 🚢 Production Deployment
+## 🚢 Production Deployment Guide
 
-### Backend (Render)
-1. Fork or push this repository to GitHub.
-2. In Render, select **"New Web Service"** and connect the repository.
-3. Configure settings:
-   - **Root Directory:** `server`
-   - **Build Command:** `npm run build`
-   - **Start Command:** `npm run start`
-   - Or deploy via root using:
-     - **Build Command:** `npm run build:server`
-     - **Start Command:** `npm run start:server`
-4. Set Environment Variables in Render Dashboard matching `server/.env`.
-5. Ensure `CLIENT_URL` is set to `https://apply-track-1h5z.vercel.app`.
+### 1. Backend (Render)
+1. In Render, create a **New Web Service** connected to your repository.
+2. Select **Blueprint** to use `render.yaml`, or configure manually:
+   * **Root Directory:** *(leave blank for root workspace)*
+   * **Build Command:** `npm install && npm run build:server`
+   * **Start Command:** `npm run start:server`
+   * **Health Check Path:** `/health`
+3. Add all required environment variables in the Render Dashboard.
+4. Apply Prisma migrations to production Neon database:
+   ```bash
+   npx prisma migrate deploy --schema=packages/database/prisma/schema.prisma
+   ```
 
-### Frontend (Vercel)
-1. Import the repository into Vercel.
+### 2. Frontend (Vercel)
+1. Import repository into Vercel.
 2. Set **Root Directory** to `client`.
 3. Set **Framework Preset** to `Vite`.
-4. Add Environment Variable:
-   - `VITE_BACKEND_URL` = `https://applytrack-580j.onrender.com/api/v1`
+4. Configure environment variable:
+   * `VITE_BACKEND_URL` = `https://applytrack-580j.onrender.com/api/v1`
 5. Click **Deploy**.
+
+### 3. Google Cloud Pub/Sub Push Subscription Setup
+1. In Google Cloud Console, open **Pub/Sub** ➔ **Topics**.
+2. Grant **Pub/Sub Publisher** (`roles/pubsub.publisher`) role on your topic to:  
+   `gmail-api-push@system.gserviceaccount.com`
+3. Create a **Subscription** with:
+   * **Delivery Type:** Push
+   * **Endpoint URL:** `https://applytrack-580j.onrender.com/api/v1/webhooks/google-pubsub?token=<YOUR_GOOGLE_PUBSUB_VERIFICATION_TOKEN>`
 
 ---
 
-## 🔒 Security & Privacy Commitments
-- **Zero Email Body Storage:** ApplyTrack never reads, stores, or logs the contents of your emails. Only metadata (sender, timestamp, thread ID) is processed.
-- **AES-256-GCM Vault:** User OAuth refresh tokens are encrypted at rest using an AES-256-GCM cipher before writing to the database.
-- **In-Memory Resume Parsing:** Uploaded PDF resumes are parsed in volatile RAM buffer memory and immediately discarded. No resumes are written to disk or public buckets.
-- **Soft Deletions Only:** All deletions are handled non-destructively via `isArchived = true` to preserve user history integrity.
+## 🔒 Security & Privacy Guarantees
+
+* **Zero Email Body Access:** Strictly complies with Google least-privilege review guidelines using `gmail.metadata`. Email body contents are never requested or parsed.
+* **AES-256-GCM Vault:** User refresh tokens, application notes, and company metadata are encrypted at rest with authenticated ciphers.
+* **In-Memory PDF Handling:** Uploaded resumes exist strictly in volatile RAM for parsing and are wiped immediately following Groq context generation.
+* **Defensive Concurrency:** Webhook requests are deduplicated using atomic Redis `SETNX` locks to prevent duplicate job processing.
 
 ---
 
 ## 📄 License
-This project is open-source and available under the [MIT License](LICENSE).
+This project is open-source under the [MIT License](LICENSE).
