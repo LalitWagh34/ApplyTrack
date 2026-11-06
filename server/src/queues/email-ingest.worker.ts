@@ -185,6 +185,7 @@ export function initEmailIngestWorker(): Worker {
     },
     {
       connection: redisConnectionOptions,
+      drainDelay: 60,
       concurrency: 5
     }
   );

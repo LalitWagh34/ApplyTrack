@@ -6,8 +6,15 @@ import { Job, Worker } from 'bullmq';
 import { prisma } from '@applytrack/database';
 import { QUEUE_NAMES, redisConnectionOptions, WatchRenewalJobPayload } from '../config/bullmq.js';
 import { gmailService } from '../services/gmail.service.js';
+import { startPeriodicWorker } from './worker-lifecycle.js';
 
-export function initWatchRenewalWorker(): Worker {
+export function initWatchRenewalWorker(): { close: () => Promise<void> } {
+  return startPeriodicWorker(createWatchRenewalWorker, 5 * 60 * 1000, error => {
+    console.error('[WatchRenewal] Failed to close maintenance worker:', error);
+  });
+}
+
+function createWatchRenewalWorker(): Worker {
   const worker = new Worker<WatchRenewalJobPayload>(
     QUEUE_NAMES.WATCH_RENEWAL,
     async (_job: Job<WatchRenewalJobPayload>) => {
@@ -52,6 +59,7 @@ export function initWatchRenewalWorker(): Worker {
     }
   );
 
+  worker.on('error', error => console.error('[WatchRenewal] Worker error:', error));
   return worker;
 }
 

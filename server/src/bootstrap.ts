@@ -5,10 +5,11 @@
 import { FastifyInstance } from 'fastify';
 import { env } from './config/env.js';
 import { buildApp } from './app.js';
-import { allQueues, scheduleDailyWatchRenewal } from './config/bullmq.js';
+import { allQueues, followUpQueue, scheduleDailyWatchRenewal } from './config/bullmq.js';
 import { initEmailIngestWorker } from './queues/email-ingest.worker.js';
 import { initWatchRenewalWorker } from './queues/watch-renewal.worker.js';
 import { initFollowUpCronWorker } from './queues/followup-cron.worker.js';
+import { hasFollowUpWork } from './queues/worker-lifecycle.js';
 
 let serverInstance: FastifyInstance | null = null;
 
@@ -19,7 +20,16 @@ export async function bootstrap(): Promise<FastifyInstance> {
   // Initialize BullMQ Workers
   const emailWorker = initEmailIngestWorker();
   const watchWorker = initWatchRenewalWorker();
-  const followUpWorker = initFollowUpCronWorker();
+  // Skip only after Redis confirms there is no retained work or recurring schedule.
+  let startFollowUp = true;
+  try {
+    startFollowUp = await hasFollowUpWork(followUpQueue);
+  } catch (error) {
+    app.log.warn({ err: error }, 'Could not inspect follow-up queue; keeping its worker enabled.');
+  }
+  const followUpWorker = startFollowUp ? initFollowUpCronWorker() : undefined;
+  if (!startFollowUp) app.log.info('Follow-up worker disabled: no pending jobs or recurring schedules.');
+  app.addHook('onClose', async () => { await watchWorker.close(); });
 
   // Register the recurring scan without making API startup dependent on Redis availability.
   try {
@@ -50,7 +60,7 @@ export async function bootstrap(): Promise<FastifyInstance> {
     // 1. Close BullMQ workers
     try {
       app.log.info('Closing BullMQ workers...');
-      await Promise.all([emailWorker.close(), watchWorker.close(), followUpWorker.close()]);
+      await Promise.all([emailWorker.close(), watchWorker.close(), followUpWorker?.close()]);
       app.log.info('BullMQ workers closed.');
     } catch (wErr) {
       app.log.error({ wErr }, 'Error while closing workers:');
